@@ -1,9 +1,9 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: metrics-collect-agent
-Bundle-SymbolicName: com.secpro.unit.monitoring
+Bundle-SymbolicName: com.secpro.platform.monitoring
 Bundle-Version: 1.0.0.qualifier
-Bundle-Activator: com.secpro.unit.monitoring.Activator
+Bundle-Activator: com.secpro.platform.monitoring.agent.Activator
 Bundle-Vendor: secpro
 Require-Bundle: org.eclipse.core.runtime,
  com.secpro.platform.log;bundle-version="1.0.0",
