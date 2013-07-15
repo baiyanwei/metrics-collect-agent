@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.0"?>
+<plugin>
+   <extension-point id="MCA_MonitorOperation" name="MCA_MonitorOperation" schema="schema/MCA_MonitorOperation.exsd">
+   	<operation id="http" class="com.yottaa.platform.router.monitoring.operations.http.HttpOperation" reSetID="true">
+   		</operation>
+   		<operation id="icmp" class="com.yottaa.platform.router.monitoring.operations.Icmp" reSetID="true">
+   		</operation>
+   		<operation id="dns" class="com.yottaa.platform.router.monitoring.operations.DnsOperation" reSetID="true">
+   		</operation>
+		<operation id="robots" class="com.yottaa.platform.router.monitoring.operations.RobotsCheckOperation" reSetID="true">
+		</operation>
+		<operation id="webpage" class="com.yottaa.platform.router.monitoring.operations.FirebugOperation" reSetID="false">
+		</operation>
+		<operation id="webpage" class="com.yottaa.platform.router.monitoring.operations.WebPageOperation" reSetID="false">
+		</operation>
+   </extension-point>	
+
+
+</plugin>
