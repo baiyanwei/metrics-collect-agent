@@ -47,7 +47,7 @@ import com.secpro.platform.monitoring.agent.utils.Constants;
 import com.secpro.platform.monitoring.agent.utils.CoreConstants;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
-@ServiceInfo(description = "This service deals with Storing data directly into the DPU.", configurationPath = "router/services/dpuDirectStorage/")
+@ServiceInfo(description = "Store data directly into the TSS with HTTP", configurationPath = "mca/services/dpuDirectStorage/")
 public class HTTPStorageAdapter implements IService, IDataStorage {
 
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(HTTPStorageAdapter.class);
@@ -284,7 +284,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			client.configure(config);
 			client.start();
 			//
-			StorageAdapterService.updateRquest2DpuCount();
+			StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			
 		}
@@ -315,7 +315,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			client.configure(config);
 			client.start();
 			//
-			StorageAdapterService.updateRquest2DpuCount();
+			StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchMessage", e);
 			for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {

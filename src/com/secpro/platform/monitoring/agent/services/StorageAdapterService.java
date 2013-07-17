@@ -14,20 +14,24 @@ import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
 
 /**
- * This class handles the interaction of the router with the Amazon.
- * 
- * @author bbuffone
- * 
+ * @author baiyanwei
+ * Jul 16, 2013
+ *
+ * 存储接口适配器
+ * 当其它服务在使用存储服务时，直接本服务，
+ * 具体的存储现实方式由StorageAdapterService根据
+ * 配置生产。
+ *
  */
-@ServiceInfo(description = "This service deals with Storing data into s3.", configurationPath = "router/services/storageAdapter/")
+@ServiceInfo(description = "storage adpater ,define implements", configurationPath = "mca/services/StorageAdapterService/")
 public class StorageAdapterService implements IService, IDataStorage {
 
 	@XmlElement(name = "storageType")
 	public String _storageType = "";
 	// count for how many request MCA sends to DPU.
-	public static long _sendRquest2Dpu = 0;
+	public static long _sendRquestCount = 0;
 	// count for how many response MCA get from DPU.
-	public static long _getResponse4Dpu = 0;
+	public static long _getResponseCount = 0;
 	//
 	// PRIVATE INSTANCE VARIABLES
 	//
@@ -70,19 +74,19 @@ public class StorageAdapterService implements IService, IDataStorage {
 		}
 	}
 
-	public static void updateRquest2DpuCount() {
-		if (Long.MAX_VALUE == (_sendRquest2Dpu + 1)) {
-			_sendRquest2Dpu = 0;
-			_getResponse4Dpu = 0;
+	public static void updateRquestCount() {
+		if (Long.MAX_VALUE == (_sendRquestCount + 1)) {
+			_sendRquestCount = 0;
+			_sendRquestCount = 0;
 		}
-		_sendRquest2Dpu++;
+		_sendRquestCount++;
 	}
 
-	public static void updateResponse4DpuCount() {
-		if (Long.MAX_VALUE == (_getResponse4Dpu + 1)) {
-			_sendRquest2Dpu = 0;
-			_getResponse4Dpu = 0;
+	public static void updateResponseCount() {
+		if (Long.MAX_VALUE == (_getResponseCount + 1)) {
+			_getResponseCount = 0;
+			_getResponseCount = 0;
 		}
-		_getResponse4Dpu++;
+		_getResponseCount++;
 	}
 }

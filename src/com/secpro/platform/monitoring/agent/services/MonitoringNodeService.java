@@ -2,6 +2,13 @@ package com.secpro.platform.monitoring.agent.services;
 
 import com.secpro.platform.core.services.IService;
 
+/**
+ * @author baiyanwei
+ * Jul 16, 2013
+ *
+ * 采集器节点管理服务，提供采集器的LOCATION信息，提供采集器的性能指标与心跳影响
+ *
+ */
 public class MonitoringNodeService implements IService {
 
 	public String getNodeLocation() {

@@ -81,7 +81,7 @@ public class FetchTaskListener implements IClientResponseListener {
 
 		if (_isHasResponse == 0) {
 			_isHasResponse = 1;
-			StorageAdapterService.updateResponse4DpuCount();
+			StorageAdapterService.updateResponseCount();
 		}
 		try {
 			if (messageObj != null) {
@@ -115,7 +115,7 @@ public class FetchTaskListener implements IClientResponseListener {
 
 		if (_isHasResponse == 0) {
 			_isHasResponse = 1;
-			StorageAdapterService.updateResponse4DpuCount();
+			StorageAdapterService.updateResponseCount();
 		}
 		new Thread("DPUStorageListener.taskProcessingAction.recycle") {
 			public void run() {
