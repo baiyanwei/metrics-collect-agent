@@ -4,8 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -37,17 +35,23 @@ import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.services.ServiceInfo;
+import com.secpro.platform.core.utils.Constants;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
 import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
+import com.secpro.platform.monitoring.agent.services.MonitoringNodeService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 import com.secpro.platform.monitoring.agent.storages.IDataStorage;
-import com.secpro.platform.monitoring.agent.utils.Constants;
-import com.secpro.platform.monitoring.agent.utils.CoreConstants;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
-@ServiceInfo(description = "Store data directly into the TSS with HTTP", configurationPath = "mca/services/dpuDirectStorage/")
+/**
+ * @author baiyanwei Jul 21, 2013
+ * 
+ *         HTTP storage adapter
+ * 
+ */
+@ServiceInfo(description = "Store data directly into the TSS with HTTP", configurationPath = "mca/services/HTTPStorageAdapter/")
 public class HTTPStorageAdapter implements IService, IDataStorage {
 
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(HTTPStorageAdapter.class);
@@ -57,26 +61,28 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	@XmlElement(name = "hostPort", type = Long.class, defaultValue = "80")
 	public Long _hostPort = new Long(80);
 
-	@XmlElement(name = "useStaticThreadPool", type = Boolean.class, defaultValue = "true")
-	public Boolean _bUseStaticThreadPool = new Boolean(true);
-
 	// this is the path for the task to be fetched to.
-	@XmlElement(name = "fetchTasksPath", defaultValue = "/samples/fetch")
-	public String _fetchTasksPath = "";
+	@XmlElement(name = "fetchTaskPath", defaultValue = "/samples/fetch")
+	public String _fetchTaskPath = "";
 
-	// This is the Http Method for fetchTasksPath.
-	@XmlElement(name = "fetchTasksHttpMethod", defaultValue = "GET")
-	public String _fetchTasksHttpMethod = "";
+	@XmlElement(name = "pushSamplePath", defaultValue = "/samples/push")
+	public String _pushSamplePath = "";
 
+	@XmlElement(name = "userName", defaultValue = "mca")
 	public String _username = "";
+
+	@XmlElement(name = "passWord", defaultValue = "123456")
 	public String _password = "";
-	
-	final private static String FETCH_MESSAGE_BODY = "";
-	
+
+	final private static String FETCH_MESSAGE_BODY = "ok";
+
+	private MonitoringNodeService _monitoringNodeService = null;
 	private MonitoringService _monitoringService = null;
+
 	@Override
 	public void start() throws PlatformException {
-		// _amazonService = OSGiServiceHelper.findService(AmazonService.class);
+		_monitoringNodeService = ServiceHelper.findService(MonitoringNodeService.class);
+		_monitoringService = ServiceHelper.findService(MonitoringService.class);
 	}
 
 	@Override
@@ -84,9 +90,6 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	}
 
 	/**
-	 * generate the signature see
-	 * http://192.168.1.22:8080/confluence/display/yottaa/Data+Submission+API
-	 * for more details
 	 * 
 	 * @param contents
 	 * @param requestHeaders
@@ -167,21 +170,89 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		}
 	}
 
+	@Override
+	public void uploadRawData(HashMap<String, String> messageInputAndRequestHeaders) throws PlatformException {
+		try {
+			//
+			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSamplePath, HttpMethod.PUT, messageInputAndRequestHeaders.toString());
+			//
+			HttpClient client = new HttpClient();
+			ClientConfiguration config = new ClientConfiguration();
+			config._endPointHost = this._hostName;
+			config._endPointPort = this._hostPort.intValue();
+			config._synchronousConnection = false;
+			config._httpRequest = httpRequestV2;
+			config._responseListener = new PushDataSampleListener();
+			config._content = null;
+			//
+			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
+			appendRequestHeaderParameters(requestHeadParaMap, 0);
+			config._parameterMap = requestHeadParaMap;
+			//
+			client.configure(config);
+			//
+			client.start();
+			//
+			StorageAdapterService.updateRquestCount();
+		} catch (Exception e) {
+			theLogger.exception(e);
+		}
+	}
+
+	@Override
+	public void executeFetchMessage(List<MonitoringWorkflow> workflows) {
+		try {
+			if (_monitoringService == null) {
+				_monitoringService = ServiceHelper.findService(MonitoringService.class);
+			}
+			TaskProcessingAction taskAction = new TaskProcessingAction(workflows);
+			// This is the parameters of the Fetch message
+			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
+			appendRequestHeaderParameters(requestHeadParaMap, workflows.size());
+			//
+			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._fetchTaskPath, HttpMethod.GET, FETCH_MESSAGE_BODY);
+			//
+			HttpClient client = new HttpClient();
+			ClientConfiguration config = new ClientConfiguration();
+			config._endPointHost = this._hostName;
+			config._endPointPort = this._hostPort.intValue();
+			config._synchronousConnection = false;
+			config._httpRequest = httpRequestV2;
+			config._responseListener = new FetchTaskListener(taskAction);
+			config._parameterMap = requestHeadParaMap;
+			config._content = null;
+			//
+			client.configure(config);
+			//
+			client.start();
+			//
+			StorageAdapterService.updateRquestCount();
+		} catch (Exception e) {
+			theLogger.exception("executeFetchMessage", e);
+			for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
+				try {
+					iter.next().recycleForReady();
+				} catch (Exception loopException) {
+					continue;
+				}
+			}
+		}
+	}
+
 	//
 	// PRIVATE METHODS
 	//
 
-	private DefaultHttpRequest createHttpMessage(String content) throws NoSuchAlgorithmException, IOException, Exception {
-		if(content==null){
-			content="";
+	private DefaultHttpRequest createHttpMessage(String accessPath, HttpMethod httpMethod, String content) throws NoSuchAlgorithmException, IOException, Exception {
+		if (content == null) {
+			content = "";
 		}
-		//
-		HttpMethod httpMethod = HttpMethod.valueOf(this._fetchTasksHttpMethod);
-		StringBuilder parametersBuilder = new StringBuilder("?");
-		parametersBuilder.append("v=2&");
-		parametersBuilder.append("l").append("=").append(URLEncoder.encode("xxxxxxxxxxxxxxx", Charset.defaultCharset().name())).append("&");
-		DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, httpMethod, this._fetchTasksPath + parametersBuilder.toString());
-
+		// fill the request parameters in to query string.
+		// StringBuilder parametersBuilder = new StringBuilder("?");
+		// parametersBuilder.append("c=&l=&o=");
+		// create HTTP request with query parameter.
+		DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, httpMethod, accessPath);
+		// identify HTTP port we use
 		if (80 == this._hostPort.intValue()) {
 			request.addHeader(HttpHeaders.Names.HOST, this._hostName);
 		} else {
@@ -193,13 +264,15 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 				return string0.compareToIgnoreCase(string1);
 			}
 		});
+		//
 		requestHeaders.put(HttpHeaders.Names.DATE, new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US).format(new Date()));
+		// md5 coding hash string.
 		requestHeaders.put(HttpHeaders.Names.CONTENT_MD5, computeMD5Hash(content));
 		requestHeaders.put(HttpHeaders.Names.CONTENT_TYPE, "text/plain");
 
 		// We need to set the content encoding to be UTF-8 in order to have the
 		// message properly decoded.
-		requestHeaders.put(HttpHeaders.Names.CONTENT_ENCODING, CoreConstants.UTF_8);
+		requestHeaders.put(HttpHeaders.Names.CONTENT_ENCODING, Constants.DEFAULT_ENCODING);
 
 		// Create the security signature.
 		String signature = this.createSignature(content, requestHeaders, httpMethod, Constants.HMAC_SHA1_ALGORITHM);
@@ -217,10 +290,10 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		}
 
 		// Needs to use the size of the bytes in the string.
-		byte[] bytes = content.getBytes(CoreConstants.UTF_8);
+		byte[] bytes = content.getBytes(Constants.DEFAULT_CHARSET);
 
 		request.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(bytes.length));
-		request.addHeader(HttpHeaders.Names.USER_AGENT, "Monitoring Software - Monitor Agent");
+		request.addHeader(HttpHeaders.Names.USER_AGENT, "Mectrics-Collect-Agent");
 
 		ChannelBuffer channelBuffer = ChannelBuffers.buffer(bytes.length);
 		channelBuffer.writeBytes(bytes);
@@ -267,69 +340,15 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		return "";
 	}
 
-	@Override
-	public void uploadRawData(HashMap<String, String> messageInputAndRequestHeaders) throws PlatformException {
-		// TODO Auto-generated method stub
-		try {
-			//
-			DefaultHttpRequest httpRequestV2 = createHttpMessage(messageInputAndRequestHeaders.toString());
-			HttpClient client = new HttpClient();
-			ClientConfiguration config = new ClientConfiguration();
-			config._endPointURI = this._hostName;
-			config._endPointPort = this._hostPort.intValue();
-			config._synchronousConnection = false;
-			config._httpRequest=httpRequestV2;
-			config._responseListener=new PushDataSampleListener();
-			//config._parameterMap=requestHeadParaMap;
-			client.configure(config);
-			client.start();
-			//
-			StorageAdapterService.updateRquestCount();
-		} catch (Exception e) {
-			
-		}
-	}
-
-	@Override
-	public void executeFetchMessage(List<MonitoringWorkflow> workflows) {
-		// TODO Auto-generated method stub
-		try {
-			if (_monitoringService == null) {
-				_monitoringService = ServiceHelper.findService(MonitoringService.class);
-			}
-			TaskProcessingAction taskAction = new TaskProcessingAction(workflows);
-			// This is the parameters of the Fetch message
-			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			requestHeadParaMap.put("body", FETCH_MESSAGE_BODY);
-			addFetchParameters(requestHeadParaMap, workflows);
-			//
-			DefaultHttpRequest httpRequestV2 = createHttpMessage(FETCH_MESSAGE_BODY);
-			HttpClient client = new HttpClient();
-			ClientConfiguration config = new ClientConfiguration();
-			config._endPointURI = this._hostName;
-			config._endPointPort = this._hostPort.intValue();
-			config._synchronousConnection = false;
-			config._httpRequest=httpRequestV2;
-			config._responseListener=new FetchTaskListener(taskAction);
-			config._parameterMap=requestHeadParaMap;
-			client.configure(config);
-			client.start();
-			//
-			StorageAdapterService.updateRquestCount();
-		} catch (Exception e) {
-			theLogger.exception("executeFetchMessage", e);
-			for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
-				try {
-					iter.next().recycleForReady();
-				} catch (Exception loopException) {
-					continue;
-				}
-			}
-		}
-	}
-	private void addFetchParameters(HashMap<String, String> requestHeadParaMap, List<MonitoringWorkflow> workflows) {
-		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringService._location);
-		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflows.size()));
+	/**
+	 * append Head parameter into request.
+	 * 
+	 * @param requestHeadParaMap
+	 * @param workflows
+	 */
+	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount) {
+		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringNodeService._nodeLocation);
+		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflowCount));
 		requestHeadParaMap.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
 	}
 }

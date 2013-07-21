@@ -1,20 +1,28 @@
 package com.secpro.platform.monitoring.agent.operations;
 
-import com.secpro.platform.core.exception.PlatformException;
+import com.secpro.platform.core.configuration.GenericConfiguration;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
-
+/**
+ * @author baiyanwei Jul 21, 2013
+ * 
+ *         monitor operation basic abstract class .all operation should extends
+ *         this class .and implement its method. And do your business in it.
+ * 
+ */
 public abstract class MonitorOperation implements IMonitorOperation {
 
 	public static long MILLI_TO_NANO = 1000000;
 	public static long _totalOperationComplete = 0;
 	public static long _totalOperationError = 0;
+	protected String _operationID = "MonitorOperation";
 	protected MonitoringService _monitoringService = null;
-	//protected GenericConfiguration _actionConfiguration = null;
+	protected GenericConfiguration _operationConfiguration = null;
 	protected IOperationListener _operationListener = null;
 	protected MonitoringWorkflow _monitoringWorkflow = null;
-	// protected Message _message = null;
+	//The operation execution message.
+	protected Object _resultMessageObject = null;
 
 	// this is used to mark the monitor operation in progress. Need
 	// to set to true
@@ -35,26 +43,6 @@ public abstract class MonitorOperation implements IMonitorOperation {
 	public OperationError getOperationError() {
 		return _operationError;
 	}
-
-	//
-	//
-	//
-	public boolean getInOperation() {
-		return _bInOperation;
-	}
-
-	public abstract String getTaskId();
-	
-	public abstract void setTaskId(String newId);
-
-	//
-	// PUBLIC METHODS
-	//
-//	public void configure(GenericConfiguration actionConfiguration, MonitoringService monitoringService, MonitoringWorkflow monitoringWorkflow) {
-//		_actionConfiguration = actionConfiguration;
-//		_monitoringService = monitoringService;
-//		_monitoringWorkflow = monitoringWorkflow;
-//	}
 
 	//
 	// EVENT METHODS
@@ -109,31 +97,38 @@ public abstract class MonitorOperation implements IMonitorOperation {
 	}
 
 	/**
-	 * @return
-	 * Get timeout code of operation
+	 * @return Get timeout code of operation
 	 */
 	public int getErrorTypeAboutTimeout() {
 		return OperationError.McaError.WORKFLOW_TOMEOUT;
 	}
 
 	/**
-	 * @return
-	 * get timeout message of operation.
+	 * @return get timeout message of operation.
 	 */
 	public String getErrorMessageAboutTimeout() {
 		return OperationError.McaError.WORKFLOW_TOMEOUT_MESSAGE;
 	}
 
 	@Override
-	public void destroy() throws PlatformException {
-		// nothing do here.
-
+	public void configure(GenericConfiguration operationConfiguration, MonitoringService monitoringService, MonitoringWorkflow monitoringWorkflow) {
+		_operationConfiguration = operationConfiguration;
+		_monitoringService = monitoringService;
+		_monitoringWorkflow = monitoringWorkflow;
 	}
 
 	@Override
-	public void start() throws PlatformException {
-		// nothing do here.
-
+	public void setOperationID(String operationID) {
+		this._operationID = operationID;
 	}
 
+	@Override
+	public String getOperationsID() {
+		return this._operationID;
+	}
+	
+	@Override
+	public Object getMessageObject() {
+		return this._resultMessageObject;
+	}
 }

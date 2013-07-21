@@ -3,7 +3,7 @@
 <schema targetNamespace="com.secpro.platform.monitoring.agent" xmlns="http://www.w3.org/2001/XMLSchema">
 <annotation>
       <appInfo>
-         <meta.schema plugin="com.secpro.platform.monitoring.agent" id="MCA_MonitorOperation" name="MCA_MonitorOperation"/>
+         <meta.schema plugin="com.secpro.platform.monitoring.agent" id="com.secpro.platform.monitoring.agent.operations" name="com.secpro.platform.monitoring.agent.operations"/>
       </appInfo>
       <documentation>
          [Enter description of this extension point.]

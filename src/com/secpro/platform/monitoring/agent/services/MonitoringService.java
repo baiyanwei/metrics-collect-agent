@@ -2,7 +2,6 @@ package com.secpro.platform.monitoring.agent.services;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
-import java.security.Security;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -19,23 +18,17 @@ import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.metrics.AbstractMetricMBean;
 import com.secpro.platform.core.metrics.Metric;
 import com.secpro.platform.core.services.IService;
-import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.services.ServiceInfo;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.Activator;
 import com.secpro.platform.monitoring.agent.actions.FetchTSSTaskAction;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
-
-
-
 /**
- * @author baiyanwei
- * Jul 6, 2013
- *
+ * @author baiyanwei Jul 6, 2013
+ * 
  */
-@ServiceInfo(description="This service will use firefox, YSlow,  Firebug and a couple other things to monitor websites.", 
-		 configurationPath="router/services/monitoringService/")
+@ServiceInfo(description = "The main service of Metrics-Collect-Agent", configurationPath = "mca/services/monitoringService/")
 public class MonitoringService extends AbstractMetricMBean implements IService, DynamicMBean {
 
 	//
@@ -46,25 +39,12 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	@XmlElement(name = "messageTimeout", type = Long.class, defaultValue = "120000")
 	public Long _messageTimeout = new Long(120000);
 
-	@XmlElement(name = "maximumRedirectCount", type = Long.class, defaultValue = "5")
-	public static Long _maximumRedirectCount = new Long(5);
+	@XmlElement(name = "operationCapabilities", defaultValue = "snmp,ssh")
+	public String _operationCapabilities = "snmp,ssh";
 
-	@XmlElement(name = "domainNames", defaultValue = "")
-	public String _domainNames = "";
-
-	@XmlElement(name = "bucketName", defaultValue = "performance.monitoring.yottaa.com")
-	public String _bucketName = "performance.monitoring.yottaa.com";
-
-	@XmlElement(name = "operationCapabilities", defaultValue = "dns,ping,webpage")
-	public String _operationCapabilities = "dns,ping,webpage";
-
-	// fetch task msg from DPU time interval
-	@XmlElement(name = "fetchDPUTaskInterval", type = Long.class, defaultValue = "2000")
-	public long _fetchDPUTaskInterval = 2000L;
-
-	//@XmlElement(name = "userAgent", defaultValue = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1.3) Gecko/20090824 YottaaMonitor")
-	@XmlElement(name = "userAgent", defaultValue = "YottaaMonitor")
-	public String _userAgent = null;
+	// Time interval when fetch task from the TSS. 
+	@XmlElement(name = "fetchTSSTaskInterval", type = Long.class, defaultValue = "2000")
+	public long _fetchTSSTaskInterval = 2000L;
 
 	/**
 	 * Maximum number of concurrent workflows to be run concurrently.
@@ -73,56 +53,18 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	public Long _concurrentWorkflows = new Long(1);
 
 	/**
-	 * Use this to match the task queue names. Allow the monitor node to segment
-	 * queue to monitoring instances.
-	 */
-	@Metric(description = "task queue names")
-	public String _taskQueueMatch = "(.+)";
-
-	/**
 	 * This is the number of workflows that need to be completed before we read
 	 * and process the tasks queues.
 	 */
 	public Long _workflowThreshold = new Long(1);
 
-	@XmlElement(name = "httpTimersUseStaticThreadPool", type = Boolean.class, defaultValue = "false")
-	public Boolean _bHttpTimersUseStaticThreadPool = new Boolean(false);
+	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=MonitoringService")
+	public String _jmxObjectName = "secpro:type=MonitoringService";
 
-	/**
-	 * This is the timeout for http operation, like HTTP GET/PUT/POST
-	 */
-	@XmlElement(name = "httpOperationTimeout", type = Long.class, defaultValue = "30000")
-	public Long _httpOperationTimeout = new Long(30000);
-	
-	@XmlElement(name = "dnsOperationTimeout", type = Long.class, defaultValue = "30000")
-	public Long _dnsOperationTimeout = new Long(30000);
-
-	@XmlElement(name = "jmxObjectName", defaultValue = "yottaa:type=MonitoringService")
-	public String _jmxObjectName = "yottaa:type=MonitoringService";
- 
-	@XmlElement(name = "hostsFilePath", defaultValue = "")
-	public String _hostsFilePath="";
-	
-	@XmlElement(name = "browserType", type = String.class, defaultValue = "firefox")
-	public String _browserType="firefox";
-	
-	@XmlElement(name = "javaDnsTTL", type = Long.class, defaultValue = "0")
-	public Long _javaDnsTTL = new Long(0);
-	
-	@XmlElement(name = "pageDriver", type = String.class, defaultValue = "firebug")
-	public String _pageDriver = "";
-	
 	// cache the version number
 	@Metric(description = "The version number of MCA")
 	public String _version = Activator._version.toString();
-	// l(location) - (string) location used internal to identify a dataCenter,
-	// usually the provider-dataCenter (aws-us-east).
-	public String _location = "";
 	
-	//
-	// PRIVATE INSTANCE VARIABLE
-	//	
-	private MonitoringNodeService _monitoringNodeService = null;
 
 	// This is the list of workflows that the task queue will
 	// use to process tasks. the more of these, the more tasks
@@ -133,36 +75,13 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	//
 	public String _lastError = "";
 	public long _timeLastTaskFinished = 0;
-	
+
 	// polling DPU task timer caller.
 	private Timer _fetchTSSTaskTimer = null;
-	
-	
+
 	@Override
 	public void start() throws PlatformException {
-		_monitoringNodeService = ServiceHelper.findService(MonitoringNodeService.class);
-		_location = _monitoringNodeService.getNodeLocation();
 		//
-		theLogger.info("locationName", this._location);
-		//
-		// chose capabilities.
-		if (this._operationCapabilities != null) {
-			if (this._operationCapabilities.indexOf("webpage") != -1) {
-				try {
-					if ("firebug".equals(this._pageDriver.toLowerCase())) {
-//						FetchDPUTaskAction.check_necessary_services.add(FirefoxModifier.class);
-//						FetchDPUTaskAction.check_necessary_services.add(YottaaScoreService.class);
-//						FirebugOperation.id = "webpage";
-					} else if ("wpt".equals(this._pageDriver.toLowerCase())) {
-//						FetchDPUTaskAction.check_necessary_services.add(WptService.class);
-//						FetchDPUTaskAction.check_necessary_services.add(YottaaScoreService.class);
-//						WebPageOperation.id = "webpage";
-					}
-				} catch (Exception e) {
-					theLogger.exception(e);
-				}
-			}
-		}
 		// This will create the current workflows.
 		createMonitoringWorkflows(_workflowThreshold.intValue());
 		// register itself as dynamic bean
@@ -175,12 +94,10 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 		}
 
 		// load the Fetch task timer
-		_fetchTSSTaskTimer = new Timer("MonitoringService.fetchDPUTaskTimer");
-		_fetchTSSTaskTimer.schedule(new FetchTSSTaskAction(this), 20000L, _fetchDPUTaskInterval);
-		
-		theLogger.info("startUp", _workflowThreshold.intValue(), _fetchDPUTaskInterval, _operationCapabilities);
-		// setting Java Security attribute for Dns lookup records
-		Security.setProperty("networkaddress.cache.ttl", String.valueOf(_javaDnsTTL));
+		_fetchTSSTaskTimer = new Timer("MonitoringService._fetchTSSTaskTimer");
+		_fetchTSSTaskTimer.schedule(new FetchTSSTaskAction(this), 20000L, _fetchTSSTaskInterval);
+
+		theLogger.info("startUp", _workflowThreshold.intValue(), _fetchTSSTaskInterval, _operationCapabilities);
 	}
 
 	@Override
@@ -225,21 +142,21 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	// PUBLIC GETTERS AND SETTERS
 	//
 	/**
-	 * @return
-	 * get all workflow in waiting.
+	 * @return get all workflow in waiting.
 	 */
 	public List<MonitoringWorkflow> getWorkflowsWithStatus(byte status) {
 		List<MonitoringWorkflow> reList = new ArrayList<MonitoringWorkflow>();
 		Iterator<MonitoringWorkflow> iterator = _monitoringWorkflows.iterator();
 		while (iterator.hasNext() == true) {
 			MonitoringWorkflow workflow = iterator.next();
-			if (workflow.getStatus()==status) {
+			if (workflow.getStatus() == status) {
 				reList.add(workflow);
 			}
-		
+
 		}
 		return reList;
 	}
+
 	/**
 	 * This method returns a list of only the completed monitoring workflows. If
 	 * there isn't enough items than mode will be created and added to the
@@ -262,13 +179,14 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 					}
 				}
 			}
-			//increase workflow for many task.
+			// increase workflow for many task.
 			if (completed.size() < _workflowThreshold.intValue() && _monitoringWorkflows.size() < _concurrentWorkflows.intValue()) {
 				createMonitoringWorkflows(_workflowThreshold.intValue() - completed.size());
 			}
 		}
 		return completed;
 	}
+
 	//
 	// PRIVATE METHODS
 	//
@@ -291,7 +209,8 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 					cal.setTimeInMillis(currentTime);
 
 					// Need to create a unique name for the object.
-					ObjectName objectName = new ObjectName("yottaa:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-" + String.valueOf(_monitoringWorkflows.size()));
+					ObjectName objectName = new ObjectName("secpro:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-"
+							+ String.valueOf(_monitoringWorkflows.size()));
 					mBeanServer.registerMBean(workflow, objectName);
 					workflow._objectName = objectName;
 				} catch (Exception e) {
@@ -302,6 +221,7 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 			}
 		}
 	}
+
 	//
 	// STATISTICAL METHODS
 	//

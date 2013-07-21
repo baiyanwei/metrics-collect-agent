@@ -44,7 +44,7 @@ public class StorageAdapterService implements IService, IDataStorage {
 	//
 	@Override
 	public void start() throws PlatformException {
-		// Get the configured storate interface.
+		// Get the configured storage interface.
 		_dataStorage = (IDataStorage) ServiceHelper.findService(_storageType);
 		if (_dataStorage == null) {
 			throw new PlatformException("Storage implementation was not found.", null);
@@ -68,7 +68,6 @@ public class StorageAdapterService implements IService, IDataStorage {
 
 	@Override
 	public void executeFetchMessage(List<MonitoringWorkflow> workflows) {
-		// TODO Auto-generated method stub
 		if (_dataStorage != null) {
 			_dataStorage.executeFetchMessage(workflows);
 		}

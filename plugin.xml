@@ -1,20 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.0"?>
 <plugin>
-   <extension-point id="MCA_MonitorOperation" name="MCA_MonitorOperation" schema="schema/MCA_MonitorOperation.exsd">
-   	<operation id="http" class="com.yottaa.platform.router.monitoring.operations.http.HttpOperation" reSetID="true">
+	<extension-point id="metrics_collect_agent_operations" 
+   			name="com.secpro.platform.monitoring.agent.operations" 
+   			schema="schema/operations.exsd"/>
+	<extension
+         point="com.secpro.platform.monitoring.agent.metrics_collect_agent_operations">
+   		<operation id="snmp" class="com.secpro.platform.monitoring.agent.operations.snmp.SNMPOperation" reSetID="true">
    		</operation>
-   		<operation id="icmp" class="com.yottaa.platform.router.monitoring.operations.Icmp" reSetID="true">
+   		<operation id="ssh" class="com.secpro.platform.monitoring.agent.operations.ssh.SSHOperation" reSetID="true">
    		</operation>
-   		<operation id="dns" class="com.yottaa.platform.router.monitoring.operations.DnsOperation" reSetID="true">
-   		</operation>
-		<operation id="robots" class="com.yottaa.platform.router.monitoring.operations.RobotsCheckOperation" reSetID="true">
-		</operation>
-		<operation id="webpage" class="com.yottaa.platform.router.monitoring.operations.FirebugOperation" reSetID="false">
-		</operation>
-		<operation id="webpage" class="com.yottaa.platform.router.monitoring.operations.WebPageOperation" reSetID="false">
-		</operation>
-   </extension-point>	
-
-
+	</extension>
 </plugin>

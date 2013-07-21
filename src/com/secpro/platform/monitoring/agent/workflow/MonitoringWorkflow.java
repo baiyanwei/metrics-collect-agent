@@ -27,6 +27,7 @@ import com.secpro.platform.core.metrics.AbstractMetricMBean;
 import com.secpro.platform.core.metrics.Metric;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceHelper;
+import com.secpro.platform.core.utils.Utils;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.Activator;
 import com.secpro.platform.monitoring.agent.operations.IMonitorOperation;
@@ -36,7 +37,15 @@ import com.secpro.platform.monitoring.agent.operations.OperationError;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 
-
+/**
+ * @author baiyanwei Jul 18, 2013
+ * 
+ * 
+ *         The main Logic unit in MCA, work to create operation resource ,handle
+ *         operation , execute job on sort, collect operation return message,
+ *         limit running time.
+ * 
+ */
 public class MonitoringWorkflow extends AbstractMetricMBean implements IService, IOperationListener, DynamicMBean {
 	// WORKFLOW's status
 	public static final byte WORKFLOW_START = 0;
@@ -55,11 +64,11 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	//
 	// PUBLIC STATIC FINAL INSTANCE VARIABLES
 	//
-	public static final String OPERATION_EXTENSION_POINT_ID = "com.yottaa.platform.router.monitoring.operation";
+	public static final String OPERATION_EXTENSION_POINT_ID = "com.secpro.platform.monitoring.agent.metrics_collect_agent_operations";
 
 	private static HashMap<String, MessageFormat> _messageFormatters = new HashMap<String, MessageFormat>();
-	private static String[] _messageFiles = new String[] { "error.js", "error-scheduled.js", "http.js", "http-scheduled.js", "finished.js", "finished-scheduled.js", "robots.js", "robots-scheduled.js", "result.js", "result-scheduled.js", "received.js", "received-scheduled.js",
-			"dns.js", "dns-scheduled.js", "webpage.js", "webpage-scheduled.js" };
+	private static String[] _messageFiles = new String[] { "error.js", "error-scheduled.js", "ssh.js", "ssh-scheduled.js", "finished.js", "finished-scheduled.js", "snmp.js",
+			"snmp-scheduled.js", "result.js", "result-scheduled.js" };
 
 	//
 	// We need to create the message formatters used in the workflow manager
@@ -318,24 +327,6 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			logStatusMessage("received", "A monitoring node(hashCode:" + this.hashCode() + ") has received the task to start the monitoring process.");
 
 			_currentOperation = _operationToCompleteList.remove();
-			// if need to modify hosts file.
-			if (_monitoringTask.isNeedModifyHostsFile()) {
-				/*
-				 * if (DnsOperation.ID.equals(_currentOperation.getTaskId())) {
-				 * _currentOperation = _operationToCompleteList.remove(); }
-				 */
-				//
-				//this._monitoringService._modifyHostsFileAction.addHost(taskObject);
-				// if this task has hostName ,then jump DNS operation.
-			}
-			//check if need to simulate connectivity 
-			JSONObject connectivityObj = _monitoringTask.getSimulateConnectivity();
-			if (connectivityObj != null) {
-//				NetWorkConnectivityService netWorkConnectivityService = OSGiServiceHelper.findService(NetWorkConnectivityService.class);
-//				if (netWorkConnectivityService != null) {
-//					_monitoringTask.setConnectivity(netWorkConnectivityService.addNetworkConnectivity(connectivityObj, _monitoringTask.getHostNameByTargetURL()));
-//				}
-			}
 			{
 				// using thread to start up operation.
 				new Thread() {
@@ -344,9 +335,8 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 							_currentOperation.doIt(_monitoringTask);
 						} catch (Exception doItException) {
 							try {
-								workflowCreationError("start " + _currentOperation.getTaskId() + " operation error", doItException);
+								workflowCreationError("start " + _currentOperation.getOperationsID() + " operation error", doItException);
 							} catch (Exception errException) {
-								// TODO Auto-generated catch block
 								logger.exception(errException);
 							}
 						}
@@ -370,15 +360,15 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			} catch (PlatformException e) {
 				logger.exception("fixTimedOut", e);
 			}
-			String PlatformExceptionMessage = String.format("The workflow("+this.hashCode()+") for the site %s %s", _monitoringTask.getOriginalSiteUrl(), "has timed out");
+			String PlatformExceptionMessage = String.format("The workflow(" + this.hashCode() + ") for the site %s %s", _monitoringTask.getOriginalSiteUrl(), "has timed out");
 			// make errorOperation for operation
 			OperationError errOperation = _currentOperation._operationError;
 			errOperation._message = _currentOperation.getErrorMessageAboutTimeout();
 			errOperation._code = _currentOperation.getErrorTypeAboutTimeout();
 			errOperation._exception = new PlatformException(PlatformExceptionMessage, null);
-			//for error entry.
-			errOperation._entry ="{}";
-			errOperation._screenshots=new ArrayList<String>();
+			// for error entry.
+			errOperation._entry = "{}";
+			errOperation._screenshots = new ArrayList<String>();
 			//
 			logErrorMessage(_currentOperation, errOperation, false);
 		} else {
@@ -418,17 +408,17 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 
 					String id = configurationElement.getAttribute("id");
 					String reSetIDStr = configurationElement.getAttribute("reSetID");
-					
+
 					// Populate the configuration properties.
 					operationConfiguration.populateProperties(configurationElement);
-					//operation.configure(operationConfiguration, _monitoringService, this);
+					operation.configure(operationConfiguration, _monitoringService, this);
 					operation.addOperationListener(this);
 					//
 					if (reSetIDStr == null || reSetIDStr.length() == 0 || "true".equals(reSetIDStr.toLowerCase())) {
-						operation.setTaskId(id);
+						operation.setOperationID(id);
 					}
 					//
-					_id2Operation.put(operation.getTaskId(), operation);
+					_id2Operation.put(operation.getOperationsID(), operation);
 					//
 					operation.start();
 					// We will keep track of these, and will
@@ -554,14 +544,19 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 		results.put(MonitoringTask.TASK_URL_PROPERTY_NAME, _monitoringTask.getOriginalSiteUrl());
 		results.put(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME, _monitoringTask.getMonitorID());
 		//
-		//results.put(InterfaceParameter.AGNET, MonitoringManagementService.NODE_NAME);
+		// results.put(InterfaceParameter.AGNET,
+		// MonitoringManagementService.NODE_NAME);
 		//
-		//results.put(InterfaceParameter.LOCATION, _monitoringService._location);
-//		results.put(InterfaceParameter.COUNT, "0");
-//		results.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
-//		results.put(InterfaceParameter.BRWOSER, _monitoringService._browserType);
-//		results.put(MonitoringTask.TASK_CONNECTIVITY_PROPERTY_NAME, this._monitoringTask.getSimulateConnectivity()!=null?this._monitoringTask.getSimulateConnectivity().toString():"");
-		//for SLA parameter pass to server
+		// results.put(InterfaceParameter.LOCATION,
+		// _monitoringService._location);
+		// results.put(InterfaceParameter.COUNT, "0");
+		// results.put(InterfaceParameter.OPERATIONS,
+		// _monitoringService._operationCapabilities);
+		// results.put(InterfaceParameter.BRWOSER,
+		// _monitoringService._browserType);
+		// results.put(MonitoringTask.TASK_CONNECTIVITY_PROPERTY_NAME,
+		// this._monitoringTask.getSimulateConnectivity()!=null?this._monitoringTask.getSimulateConnectivity().toString():"");
+		// for SLA parameter pass to server
 		results.put(MonitoringTask.TASK_SLA_PROPERTY_NAME, this._monitoringTask.getSLA());
 		// Add the message specific information.
 		results.put("body", messageFormatter.format(objects));
@@ -613,13 +608,8 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			_monitoringService._lastError = "Task error :" + operationError._type + " - " + operationError._message;
 
 			// Need to create the error message.
-			String rawErrorData = MessagePreparer.format(getClass(), "rawErrorString", 
-					operationError._type, 
-					operationError._code, 
-					operationError._message,
-					operationError._entry,
-					new JSONArray(operationError._screenshots).toString()
-			);
+			String rawErrorData = MessagePreparer.format(getClass(), "rawErrorString", operationError._type, operationError._code, operationError._message, operationError._entry,
+					new JSONArray(operationError._screenshots).toString());
 
 			if (_isBundle == false) {
 				HashMap<String, String> messageInputAndRequestHeaders = getMessageInputAndRequestHeaders("error", rawErrorData);
@@ -641,8 +631,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	private static void createMessageFormatters() {
 		for (int index = 0; index < _messageFiles.length; index++) {
 			String fileName = _messageFiles[index];
-			StringBuffer stringBuffer=new StringBuffer();
-			//StringBuffer stringBuffer = Utils.getInputStream2StringBuffer(MonitoringWorkflow.class.getResourceAsStream("messages/" + fileName));
+			StringBuffer stringBuffer = Utils.getInputStream2StringBuffer(MonitoringWorkflow.class.getResourceAsStream("messages/" + fileName));
 
 			MessageFormat messageFormat = new MessageFormat(stringBuffer.toString());
 
@@ -670,9 +659,9 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 
 				// Log a finished status message.
 				if (_isBundle == false) {
-					logStatusMessage("finished", "Tasks was completed in " + getTotalTime() + " millis ,on workflow(hashCode:"+this.hashCode()+")");
+					logStatusMessage("finished", "Tasks was completed in " + getTotalTime() + " millis ,on workflow(hashCode:" + this.hashCode() + ")");
 				} else {
-					logScheduledFinishedMessage("finished", "Tasks was completed in " + getTotalTime() + " millis ,on workflow(hashCode:"+this.hashCode()+")");
+					logScheduledFinishedMessage("finished", "Tasks was completed in " + getTotalTime() + " millis ,on workflow(hashCode:" + this.hashCode() + ")");
 				}
 			} finally {
 				// This variable here { true | false } causes concurrency issues
@@ -695,7 +684,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 							_currentOperation.doIt(_monitoringTask);
 						} catch (Exception doItException) {
 							try {
-								workflowCreationError("start " + _currentOperation.getTaskId() + " operation error", doItException);
+								workflowCreationError("start " + _currentOperation.getOperationsID() + " operation error", doItException);
 							} catch (Exception errException) {
 								// TODO Auto-generated catch block
 								logger.exception(errException);
@@ -717,39 +706,18 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 */
 	protected void workflowCompleted(boolean bError) {
 		try {
-			// if need to modify hosts file.
-			if (_monitoringTask != null && _monitoringTask.isNeedModifyHostsFile()) {
-				//this._monitoringService._modifyHostsFileAction.clearHost(_monitoringTask.getTaskObj());
-			}
-			if (_monitoringTask.getConnectivity() != null) {
-				//NetWorkConnectivityService netWorkConnectivityService = OSGiServiceHelper.findService(NetWorkConnectivityService.class);
-//				if (netWorkConnectivityService != null) {
-//					netWorkConnectivityService.removeNetworkConnectivity(_monitoringTask.getConnectivity());
-//				}
-			}
+			_monitoringTask = null;
+			this._status = WORKFLOW_FINISH;
+			this.recycleForReady();
 			logger.debug("workflowCompleted", MonitoringWorkflow._totalTasks, _monitoringService.getProcessingAverage());
 		} catch (Exception e) {
 			logger.exception("workflowCompleted", e);
 		} finally {
 			// Setting this to null, will allow the work to be reused.
-			_monitoringTask = null;
-			this._status = WORKFLOW_FINISH;
-			this.recycleForReady();
+
 		}
 	}
-	/**
-	 * @param taskID
-	 * @param timeOutVal
-	 *            Marking a taskID Timeout for Webpagetest operations.
-	 */
-	/*
-	private void clearTimeoutWpt() {
-		WptService wptService = OSGiServiceHelper.findService(WptService.class);
-		if (wptService != null) {
-			wptService.TimedOutTask(_monitoringTask.getMonitorID(), _monitoringService._messageTimeout.longValue());
-		}
-	}
-	*/
+
 	/**
 	 * This method will create the scheduled data information.
 	 * 

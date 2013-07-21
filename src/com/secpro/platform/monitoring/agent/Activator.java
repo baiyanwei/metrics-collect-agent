@@ -81,10 +81,12 @@ public class Activator implements BundleActivator, ServiceListener {
 	private void registerServices() throws Exception {
 		//
 		ServiceHelper.registerService(new MonitoringNodeService());
+		
+		//
+		ServiceHelper.registerService(new HTTPStorageAdapter());
+		
 		//
 		ServiceHelper.registerService(new StorageAdapterService());
-		// storage adapter
-		ServiceHelper.registerService(new HTTPStorageAdapter());
 		//
 		// Monitoring Service Mca main logic.
 		ServiceHelper.registerService(new MonitoringService());
