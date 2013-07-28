@@ -1,6 +1,5 @@
 package com.secpro.platform.monitoring.agent.services;
 
-import java.util.HashMap;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -12,16 +11,11 @@ import com.secpro.platform.core.services.ServiceInfo;
 import com.secpro.platform.monitoring.agent.storages.IDataStorage;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
-
 /**
- * @author baiyanwei
- * Jul 16, 2013
- *
- * 存储接口适配器
- * 当其它服务在使用存储服务时，直接本服务，
- * 具体的存储现实方式由StorageAdapterService根据
- * 配置生产。
- *
+ * @author baiyanwei Jul 16, 2013
+ * 
+ *         存储接口适配器 当其它服务在使用存储服务时，直接本服务， 具体的存储现实方式由StorageAdapterService根据 配置生产。
+ * 
  */
 @ServiceInfo(description = "storage adpater ,define implements", configurationPath = "mca/services/StorageAdapterService/")
 public class StorageAdapterService implements IService, IDataStorage {
@@ -53,6 +47,7 @@ public class StorageAdapterService implements IService, IDataStorage {
 
 	@Override
 	public void stop() throws PlatformException {
+		_dataStorage = null;
 	}
 
 	//
@@ -60,9 +55,9 @@ public class StorageAdapterService implements IService, IDataStorage {
 	//
 
 	@Override
-	public void uploadRawData(HashMap<String, String> messageInputAndRequestHeaders) throws PlatformException {
+	public void uploadRawData(Object rawDataObj) throws PlatformException {
 		if (_dataStorage != null) {
-			_dataStorage.uploadRawData(messageInputAndRequestHeaders);
+			_dataStorage.uploadRawData(rawDataObj);
 		}
 	}
 

@@ -7,6 +7,7 @@ import org.osgi.framework.ServiceListener;
 import org.osgi.framework.Version;
 
 import com.secpro.platform.core.services.ServiceHelper;
+import com.secpro.platform.monitoring.agent.services.MetricUploadService;
 import com.secpro.platform.monitoring.agent.services.MonitoringNodeService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
@@ -90,7 +91,9 @@ public class Activator implements BundleActivator, ServiceListener {
 		//
 		// Monitoring Service Mca main logic.
 		ServiceHelper.registerService(new MonitoringService());
-		// register a management api for up level.
+		//
+		//start metric upload service.
+		ServiceHelper.registerService(new MetricUploadService());
 		//
 
 		// _context.addServiceListener(new ServiceListener() {

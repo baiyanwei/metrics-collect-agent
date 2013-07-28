@@ -22,7 +22,7 @@ public abstract class MonitorOperation implements IMonitorOperation {
 	protected IOperationListener _operationListener = null;
 	protected MonitoringWorkflow _monitoringWorkflow = null;
 	//The operation execution message.
-	protected Object _resultMessageObject = null;
+	//protected Object _resultMessageObject = null;
 
 	// this is used to mark the monitor operation in progress. Need
 	// to set to true
@@ -125,10 +125,5 @@ public abstract class MonitorOperation implements IMonitorOperation {
 	@Override
 	public String getOperationsID() {
 		return this._operationID;
-	}
-	
-	@Override
-	public Object getMessageObject() {
-		return this._resultMessageObject;
 	}
 }

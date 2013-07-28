@@ -1,6 +1,1 @@
-'{'
-    "finished": '{'
-          "state": "{0}",
-          "message": "{1}"
-    '}'
-'}'
+'{'"finished":'{'"state":"{0}","message": "{1}"'}''}'

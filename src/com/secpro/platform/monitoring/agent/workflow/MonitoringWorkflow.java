@@ -360,7 +360,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			} catch (PlatformException e) {
 				logger.exception("fixTimedOut", e);
 			}
-			String PlatformExceptionMessage = String.format("The workflow(" + this.hashCode() + ") for the site %s %s", _monitoringTask.getOriginalSiteUrl(), "has timed out");
+			String PlatformExceptionMessage = String.format("The workflow(" + this.hashCode() + ") for the site %s %s", _monitoringTask.getTaskDescription(), "has timed out");
 			// make errorOperation for operation
 			OperationError errOperation = _currentOperation._operationError;
 			errOperation._message = _currentOperation.getErrorMessageAboutTimeout();
@@ -372,7 +372,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			//
 			logErrorMessage(_currentOperation, errOperation, false);
 		} else {
-			logger.warn("monitorErrorMessage", "workflow(hashCode:" + this.hashCode() + ") is time out", _monitoringTask.getOriginalSiteUrl(), getAverageTaskTime());
+			logger.warn("monitorErrorMessage", "workflow(hashCode:" + this.hashCode() + ") is time out", _monitoringTask.getTaskDescription(), getAverageTaskTime());
 			workflowCompleted(true);
 		}
 
@@ -471,7 +471,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 * @param messageString
 	 */
 	public void logStatusMessage(String state, String messageString) {
-		logger.info("logStatusMessage", messageString, _monitoringTask.getOriginalSiteUrl(), getAverageTaskTime());
+		logger.info("logStatusMessage", messageString, _monitoringTask.getTaskDescription(), getAverageTaskTime());
 	}
 
 	/**
@@ -483,7 +483,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 * @param messageString
 	 */
 	public void logScheduledFinishedMessage(String messageType, String messageString) {
-		logger.info("logStatusMessage", messageString, _monitoringTask.getOriginalSiteUrl(), getAverageTaskTime());
+		logger.info("logStatusMessage", messageString, _monitoringTask.getTaskDescription(), getAverageTaskTime());
 		//
 		String scheduledData = createScheduledData();
 		//
@@ -541,23 +541,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 
 		// TODO Monitoring System V1 HEADER
 		results.put(MonitoringTask.TASK_TIMESTAMP_PROPERTY_NAME, String.valueOf(_executedAt.getTime()));
-		results.put(MonitoringTask.TASK_URL_PROPERTY_NAME, _monitoringTask.getOriginalSiteUrl());
 		results.put(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME, _monitoringTask.getMonitorID());
-		//
-		// results.put(InterfaceParameter.AGNET,
-		// MonitoringManagementService.NODE_NAME);
-		//
-		// results.put(InterfaceParameter.LOCATION,
-		// _monitoringService._location);
-		// results.put(InterfaceParameter.COUNT, "0");
-		// results.put(InterfaceParameter.OPERATIONS,
-		// _monitoringService._operationCapabilities);
-		// results.put(InterfaceParameter.BRWOSER,
-		// _monitoringService._browserType);
-		// results.put(MonitoringTask.TASK_CONNECTIVITY_PROPERTY_NAME,
-		// this._monitoringTask.getSimulateConnectivity()!=null?this._monitoringTask.getSimulateConnectivity().toString():"");
-		// for SLA parameter pass to server
-		results.put(MonitoringTask.TASK_SLA_PROPERTY_NAME, this._monitoringTask.getSLA());
 		// Add the message specific information.
 		results.put("body", messageFormatter.format(objects));
 
@@ -601,7 +585,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			return;
 		}
 		try {
-			logger.info("monitorErrorMessage", operationError._message, _monitoringTask.getOriginalSiteUrl(), getAverageTaskTime());
+			logger.info("monitorErrorMessage", operationError._message, _monitoringTask.getTaskDescription(), getAverageTaskTime());
 			// Increment the number of errors
 			MonitoringWorkflow._totalErrors++;
 			this.totalErrors++;
@@ -656,7 +640,6 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 		if (_operationToCompleteList.isEmpty() == true) {
 			try {
 				_totalTimeOfProcessing += getTotalTime();
-
 				// Log a finished status message.
 				if (_isBundle == false) {
 					logStatusMessage("finished", "Tasks was completed in " + getTotalTime() + " millis ,on workflow(hashCode:" + this.hashCode() + ")");
@@ -748,11 +731,12 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 * @param type
 	 * @param messageInputAndRequestHeaders
 	 */
-	protected void storeResultsMessage(String type, final HashMap<String, String> messageInputAndRequestHeaders) {
+	protected void storeResultsMessage(String type, HashMap<String, String> messageInputAndRequestHeaders) {
+		final JSONObject messageObj = new JSONObject(messageInputAndRequestHeaders);
 		new Thread() {
 			public void run() {
 				try {
-					_storageAdapter.uploadRawData(messageInputAndRequestHeaders);
+					_storageAdapter.uploadRawData(messageObj);
 				} catch (PlatformException e) {
 					logger.exception("storeResultsMessage", e);
 				}

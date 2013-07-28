@@ -142,8 +142,8 @@ public class TaskProcessingAction {
 				theLogger.warn("errorTaskFormat", MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME, taskObject.getString(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME));
 				return false;
 			}
-			if (taskObject.getString(MonitoringTask.TASK_URL_PROPERTY_NAME) == null || taskObject.getString(MonitoringTask.TASK_URL_PROPERTY_NAME).trim().equals("")) {
-				theLogger.warn("errorTaskFormat", MonitoringTask.TASK_URL_PROPERTY_NAME, taskObject.getString(MonitoringTask.TASK_URL_PROPERTY_NAME));
+			if (taskObject.getString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME) == null || taskObject.getString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME).trim().equals("")) {
+				theLogger.warn("errorTaskFormat", MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME, taskObject.getString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME));
 				return false;
 			}
 			if (taskObject.getString(MonitoringTask.TASK_OPERATION_PROPERTY_NAME) == null || taskObject.getString(MonitoringTask.TASK_OPERATION_PROPERTY_NAME).trim().equals("")) {

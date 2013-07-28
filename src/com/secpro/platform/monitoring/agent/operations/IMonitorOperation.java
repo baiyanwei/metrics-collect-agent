@@ -63,11 +63,4 @@ public interface IMonitorOperation {
 	 * set operation Env.
 	 */
 	public void configure(GenericConfiguration operationConfiguration, MonitoringService monitoringService, MonitoringWorkflow monitoringWorkflow);
-	
-	/**
-	 * @return
-	 * 
-	 * get result Message object
-	 */
-	public Object getMessageObject();
 }

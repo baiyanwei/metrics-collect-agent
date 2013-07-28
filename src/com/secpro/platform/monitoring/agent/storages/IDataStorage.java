@@ -1,6 +1,5 @@
 package com.secpro.platform.monitoring.agent.storages;
 
-import java.util.HashMap;
 import java.util.List;
 
 import com.secpro.platform.core.exception.PlatformException;
@@ -17,12 +16,12 @@ import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 public interface IDataStorage {
 
 	/**
-	 * @param isReattime
-	 * @param messageInputAndRequestHeaders
-	 * @throws RouterException
 	 * update capture data to server
+	 * 
+	 * @param rawDataObj
+	 * @throws PlatformException
 	 */
-	public void uploadRawData(HashMap<String, String> messageInputAndRequestHeaders) throws PlatformException;
+	public void uploadRawData(Object rawDataObj) throws PlatformException;
 
 	
 	/**

@@ -1,5 +1,7 @@
 package com.secpro.platform.monitoring.agent.operations.ssh;
 
+import java.util.HashMap;
+
 import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.monitoring.agent.operations.MonitorOperation;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
@@ -9,7 +11,14 @@ public class SSHOperation extends MonitorOperation {
 	@Override
 	public void doIt(MonitoringTask task) throws PlatformException {
 		// set your collecting result into message.
-		this._resultMessageObject = "SNMPOperation is executed";
+		System.out.println("SSHOperation>>do task:"+task.getTaskDescription());
+		/*
+		 * "ssh": '{' "mid": "{0}", "t": "{1}", "ip": "{2}", "s": "{3}","c":"{4}" '}'
+		 */
+		HashMap<String, String> messageInputAndRequestHeaders = this._monitoringWorkflow.getMessageInputAndRequestHeaders(this._operationID, task.getMonitorID(),
+				task.getTimestamp(), task.getPropertyString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME), "sheel command",
+				"result message");
+		this._monitoringWorkflow.createResultsMessage(this._operationID, messageInputAndRequestHeaders);
 		this.fireCompletedSuccessfully();
 	}
 

@@ -171,10 +171,14 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	}
 
 	@Override
-	public void uploadRawData(HashMap<String, String> messageInputAndRequestHeaders) throws PlatformException {
+	public void uploadRawData(Object rawDataObj) throws PlatformException {
 		try {
+			if(true){
+				System.out.println("uploadRawData>>>"+rawDataObj);
+				return;
+			}
 			//
-			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSamplePath, HttpMethod.PUT, messageInputAndRequestHeaders.toString());
+			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSamplePath, HttpMethod.PUT, rawDataObj.toString());
 			//
 			HttpClient client = new HttpClient();
 			ClientConfiguration config = new ClientConfiguration();
@@ -273,7 +277,6 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		// We need to set the content encoding to be UTF-8 in order to have the
 		// message properly decoded.
 		requestHeaders.put(HttpHeaders.Names.CONTENT_ENCODING, Constants.DEFAULT_ENCODING);
-
 		// Create the security signature.
 		String signature = this.createSignature(content, requestHeaders, httpMethod, Constants.HMAC_SHA1_ALGORITHM);
 
