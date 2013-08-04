@@ -21,7 +21,7 @@ public class MonitoringTask {
 	public static final String TASK_META_DATA_NAME = "meta_data";
 	//
 	private JSONObject _taskObj = null;
-	private HashMap<String, Object> _metaDataMap = null;
+	private HashMap<String, String> _metaDataMap = null;
 	private long _excuteIndex = 0;
 
 	public MonitoringTask(JSONObject taskObj) {
@@ -33,17 +33,25 @@ public class MonitoringTask {
 	public JSONObject getTaskObj() {
 		return _taskObj;
 	}
-	
-	private void initTaskMetaData(){
-		_metaDataMap=new HashMap<String,Object>();
+
+	/**
+	 * read meta data
+	 */
+	private void initTaskMetaData() {
+		_metaDataMap = new HashMap<String, String>();
 		try {
-			JSONObject metaObj=this._taskObj.getJSONObject(TASK_META_DATA_NAME);
-			if(metaObj==null||metaObj.length()==0){
+			JSONObject metaObj = this._taskObj.getJSONObject(TASK_META_DATA_NAME);
+			if (metaObj == null || metaObj.length() == 0) {
 				return;
 			}
-			//TODO ready the meta data.
+			String[] names = JSONObject.getNames(metaObj);
+			if (names == null || names.length == 0) {
+				return;
+			}
+			for (int i = 0; i < names.length; i++) {
+				_metaDataMap.put(names[i], metaObj.getString(names[i]));
+			}
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -103,7 +111,7 @@ public class MonitoringTask {
 	 * 
 	 * @return
 	 */
-	public HashMap<String,Object> getTaskMetaData(){
-		return this._metaDataMap; 
+	public HashMap<String, String> getTaskMetaData() {
+		return this._metaDataMap;
 	}
 }

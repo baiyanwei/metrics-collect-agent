@@ -7,9 +7,12 @@ import org.osgi.framework.ServiceListener;
 import org.osgi.framework.Version;
 
 import com.secpro.platform.core.services.ServiceHelper;
+import com.secpro.platform.monitoring.agent.bri.SysLogBeaconInterface;
 import com.secpro.platform.monitoring.agent.services.MetricUploadService;
+import com.secpro.platform.monitoring.agent.services.MonitoringEncryptService;
 import com.secpro.platform.monitoring.agent.services.MonitoringNodeService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
+import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 import com.secpro.platform.monitoring.agent.storages.http.HTTPStorageAdapter;
 
@@ -82,7 +85,10 @@ public class Activator implements BundleActivator, ServiceListener {
 	private void registerServices() throws Exception {
 		//
 		ServiceHelper.registerService(new MonitoringNodeService());
-		
+		//
+		ServiceHelper.registerService(new MonitoringEncryptService());
+		//
+		ServiceHelper.registerService(new MonitoringTaskCacheService());
 		//
 		ServiceHelper.registerService(new HTTPStorageAdapter());
 		
@@ -94,6 +100,10 @@ public class Activator implements BundleActivator, ServiceListener {
 		//
 		//start metric upload service.
 		ServiceHelper.registerService(new MetricUploadService());
+		
+		ServiceHelper.registerService(new SysLogBeaconInterface());
+		
+		
 		//
 
 		// _context.addServiceListener(new ServiceListener() {

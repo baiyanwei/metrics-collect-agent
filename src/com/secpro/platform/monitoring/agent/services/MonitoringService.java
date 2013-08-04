@@ -28,7 +28,7 @@ import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
  * @author baiyanwei Jul 6, 2013
  * 
  */
-@ServiceInfo(description = "The main service of Metrics-Collect-Agent", configurationPath = "mca/services/monitoringService/")
+@ServiceInfo(description = "The main service of Metrics-Collect-Agent", configurationPath = "mca/services/MonitoringService/")
 public class MonitoringService extends AbstractMetricMBean implements IService, DynamicMBean {
 
 	//
