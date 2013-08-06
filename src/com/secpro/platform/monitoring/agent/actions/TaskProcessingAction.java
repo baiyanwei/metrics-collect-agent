@@ -21,7 +21,7 @@ import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 public class TaskProcessingAction {
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(TaskProcessingAction.class);
 	private List<MonitoringWorkflow> _workflows = null;
-
+	public boolean _isFetchCacheTaskOnError=false;
 	public TaskProcessingAction(List<MonitoringWorkflow> workflows) {
 		_workflows = workflows;
 	}

@@ -5,8 +5,10 @@ import org.json.JSONObject;
 
 import com.secpro.platform.api.client.IClientResponseListener;
 import com.secpro.platform.core.exception.PlatformException;
+import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
+import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 
@@ -21,7 +23,6 @@ public class FetchTaskListener implements IClientResponseListener {
 	// Logging Object
 	//
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(FetchTaskListener.class);
-
 	public TaskProcessingAction _taskProcessingAction = null;
 	// 0 false 1 true
 	private byte _isHasResponse = 0;
@@ -125,15 +126,23 @@ public class FetchTaskListener implements IClientResponseListener {
 			justForTest();
 			return;
 		}
-		new Thread("DPUStorageListener.taskProcessingAction.recycle") {
-			public void run() {
-				recycleWorkflows();
+		if (_taskProcessingAction._isFetchCacheTaskOnError == true) {
+			new Thread("DPUStorageListener.taskProcessingAction.processTasks") {
+				public void run() {
+					processTasks(getTaskFromLocalCache());
+				}
+			}.start();
+			return;
+		} else {
+			new Thread("DPUStorageListener.taskProcessingAction.recycle") {
+				public void run() {
+					recycleWorkflows();
+				}
+			}.start();
+			if (messageObj != null) {
+				theLogger.exception(new Exception(messageObj.toString()));
 			}
-		}.start();
-		if (messageObj != null) {
-			theLogger.exception(new Exception(messageObj.toString()));
 		}
-
 	}
 
 	private void justForTest() {

@@ -20,7 +20,7 @@ import com.secpro.platform.monitoring.agent.bri.syslog.SyslogStore;
  *         SysLog listenter
  * 
  */
-@ServiceInfo(description = "metric upload service, upload the metric to data process server.", configurationPath = "mca/services/MetricUploadService/")
+@ServiceInfo(description = "metric upload service, upload the metric to data process server.", configurationPath = "mca/services/SysLogBeaconInterface/")
 public class SysLogBeaconInterface implements IService {
 	//
 	// Logging Object
@@ -49,7 +49,12 @@ public class SysLogBeaconInterface implements IService {
 		if (_sysLogListenerPort < 0) {
 			_sysLogListenerPort = 514;
 		}
-		launchingSyslogReceive();
+		new Thread(){
+			public void run(){
+				launchingSyslogReceive();
+			}
+		}.start();
+		
 	}
 
 	@Override

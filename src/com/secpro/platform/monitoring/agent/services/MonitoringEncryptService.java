@@ -1,13 +1,19 @@
 package com.secpro.platform.monitoring.agent.services;
 
 import com.secpro.platform.core.services.IService;
+import com.secpro.platform.core.services.ServiceInfo;
+import com.secpro.platform.log.utils.PlatformLogger;
 
+@ServiceInfo(description = "Monitoring encrypt service", configurationPath = "mca/services/MonitoringEncryptService/")
 public class MonitoringEncryptService implements IService {
-
+	//
+	// Logging Object
+	//
+	private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringService.class);
 	@Override
 	public void start() throws Exception {
 		// TODO Auto-generated method stub
-
+		theLogger.info("startUp");
 	}
 
 	@Override
@@ -87,11 +93,4 @@ public class MonitoringEncryptService implements IService {
 			return des;
 		}
 	}
-//	public static void main(String[] args){
-//		String s=Encode("liyan");
-//		System.out.println(s);
-//		System.out.println(decode(s));
-//		
-//	}
-
 }

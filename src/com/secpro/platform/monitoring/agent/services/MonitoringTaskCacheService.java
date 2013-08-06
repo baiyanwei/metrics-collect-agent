@@ -58,11 +58,11 @@ public class MonitoringTaskCacheService implements IService {
 	public String _prefixTaskName;
 	//TODO remove later
 	@XmlElement(name = "taskExecuteHour", type = Long.class, defaultValue = "21")
-	public String _taskExecuteHour;
+	public Long _taskExecuteHour;
 	@XmlElement(name = "taskExecMin", type = Long.class, defaultValue = "45")
-	public String _taskExecMin;
+	public Long _taskExecMin;
 	@XmlElement(name = "taskExecSec", type = Long.class, defaultValue = "0")
-	public String _taskExecSec;
+	public Long _taskExecSec;
 	//END remove later
 	@XmlElement(name = "taskNameTimeFormat1", defaultValue = "yyyyMMdd")
 	public String _taskNameTimeFormat1 = "yyyyMMdd";
@@ -75,7 +75,7 @@ public class MonitoringTaskCacheService implements IService {
 	//
 	private SimpleDateFormat _taskNameDataFormat1 = null;
 	private SimpleDateFormat _taskNameDataFormat2 = null;
-	private Timer _fetchTSSTaskTimer = null;
+	private Timer _taskManageTimer = null;
 	private FilenameFilter _taskJSONFileFilter = null;
 
 	@Override
@@ -91,9 +91,10 @@ public class MonitoringTaskCacheService implements IService {
 		loadLocalTaskByFile();
 		//
 		if (_isflag) {
-			_fetchTSSTaskTimer = new Timer("MonitoringService._fetchTSSTaskTimer");
-			_fetchTSSTaskTimer.schedule(new CacheTaskManageAction(this), 20000L, _taskTimerExecuteInterval);
+			_taskManageTimer = new Timer("MonitoringTaskCacheService._taskManageTimer");
+			_taskManageTimer.schedule(new CacheTaskManageAction(this), 20000L, _taskTimerExecuteInterval);
 		}
+		theLogger.info("startUp");
 	}
 
 	@Override
