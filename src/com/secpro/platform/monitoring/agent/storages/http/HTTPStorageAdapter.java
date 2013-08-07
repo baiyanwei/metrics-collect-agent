@@ -251,10 +251,12 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		if (content == null) {
 			content = "";
 		}
+		
 		// fill the request parameters in to query string.
 		// StringBuilder parametersBuilder = new StringBuilder("?");
 		// parametersBuilder.append("c=&l=&o=");
 		// create HTTP request with query parameter.
+		
 		DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, httpMethod, accessPath);
 		// identify HTTP port we use
 		if (80 == this._hostPort.intValue()) {
@@ -262,7 +264,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		} else {
 			request.addHeader(HttpHeaders.Names.HOST, this._hostName + ":" + this._hostPort);
 		}
-
+		theLogger.info(this._hostName+":"+this._hostPort+accessPath);
 		TreeMap<String, String> requestHeaders = new TreeMap<String, String>(new Comparator<String>() {
 			public int compare(String string0, String string1) {
 				return string0.compareToIgnoreCase(string1);

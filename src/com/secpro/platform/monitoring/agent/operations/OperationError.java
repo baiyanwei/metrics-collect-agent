@@ -2,6 +2,8 @@ package com.secpro.platform.monitoring.agent.operations;
 
 import java.util.ArrayList;
 
+import com.secpro.platform.core.exception.PlatformException;
+
 /**
  * This class communicates the error with the rest of the monitoring application
  * and the DPU see the page http://wiki.yottaa.com/Data-Submission-API.html for
@@ -125,7 +127,7 @@ public class OperationError {
 	/**
 	 * This was the exception of the caused the error.
 	 */
-	public Exception _exception = null;
+	public PlatformException _exception = null;
 
 	public ArrayList<String> _screenshots = new ArrayList<String>();
 }

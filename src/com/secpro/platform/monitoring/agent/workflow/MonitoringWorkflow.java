@@ -59,7 +59,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	public static final long _waitForFetchTime = 10000L;
 	//
 	// Logging Object
-	private static PlatformLogger logger = PlatformLogger.getLogger(Activator.class);
+	private static PlatformLogger theLogger = PlatformLogger.getLogger(Activator.class);
 
 	//
 	// PUBLIC STATIC FINAL INSTANCE VARIABLES
@@ -292,7 +292,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 		if (taskObject == null) {
 			// when has this case in processing ,MCA should reset the status and
 			// stop a timer .
-			logger.warn("dateStringError", "taskObject is null");
+			theLogger.warn("dateStringError", "taskObject is null");
 			this.recycleForReady();
 			return;
 		}
@@ -318,7 +318,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			if (operation != null) {
 				_operationToCompleteList.add(operation);
 			} else {
-				logger.warn("operationNotFound", operations[index]);
+				theLogger.warn("operationNotFound", operations[index]);
 			}
 		}
 		// start working on operations in task.
@@ -334,11 +334,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 						try {
 							_currentOperation.doIt(_monitoringTask);
 						} catch (Exception doItException) {
-							try {
-								workflowCreationError("start " + _currentOperation.getOperationsID() + " operation error", doItException);
-							} catch (Exception errException) {
-								logger.exception(errException);
-							}
+							workflowCreationError("start " + _currentOperation.getOperationsID() + " operation error", doItException);
 						}
 					}
 				}.start();
@@ -358,7 +354,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			try {
 				_currentOperation.stopIt(_monitoringTask);
 			} catch (PlatformException e) {
-				logger.exception("fixTimedOut", e);
+				theLogger.exception("fixTimedOut", e);
 			}
 			String PlatformExceptionMessage = String.format("The workflow(" + this.hashCode() + ") for the site %s %s", _monitoringTask.getTaskDescription(), "has timed out");
 			// make errorOperation for operation
@@ -372,7 +368,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			//
 			logErrorMessage(_currentOperation, errOperation, false);
 		} else {
-			logger.warn("monitorErrorMessage", "workflow(hashCode:" + this.hashCode() + ") is time out", _monitoringTask.getTaskDescription(), getAverageTaskTime());
+			theLogger.warn("monitorErrorMessage", "workflow(hashCode:" + this.hashCode() + ") is time out", _monitoringTask.getTaskDescription(), getAverageTaskTime());
 			workflowCompleted(true);
 		}
 
@@ -424,7 +420,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 					// We will keep track of these, and will
 					_operationList.add(operation);
 				} catch (Exception e) {
-					logger.exception("start", e);
+					theLogger.exception("start", e);
 				}
 			}
 		}
@@ -471,7 +467,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 * @param messageString
 	 */
 	public void logStatusMessage(String state, String messageString) {
-		logger.info("logStatusMessage", messageString, _monitoringTask.getTaskDescription(), getAverageTaskTime());
+		theLogger.info("logStatusMessage", messageString, _monitoringTask.getTaskDescription(), getAverageTaskTime());
 	}
 
 	/**
@@ -483,7 +479,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 * @param messageString
 	 */
 	public void logScheduledFinishedMessage(String messageType, String messageString) {
-		logger.info("logStatusMessage", messageString, _monitoringTask.getTaskDescription(), getAverageTaskTime());
+		theLogger.info("logStatusMessage", messageString, _monitoringTask.getTaskDescription(), getAverageTaskTime());
 		//
 		String scheduledData = createScheduledData();
 		//
@@ -556,17 +552,22 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 * cause the workflow to stop
 	 * 
 	 */
-	private void workflowCreationError(String message, Exception exception) throws PlatformException {
-		PlatformException PlatformException = new PlatformException(message, exception);
+	private void workflowCreationError(String message, Exception exception) {
 
 		OperationError operationError = new OperationError();
 		operationError._code = OperationError.McaError.GENERAL_ERROR;
-		operationError._message = OperationError.McaError.GENERAL_ERROR_MESSAGE;
-		operationError._exception = PlatformException;
+
+		if (exception instanceof PlatformException) {
+			operationError._exception = (PlatformException) exception;
+			operationError._message = operationError._exception.getExceptionMassage();
+		} else {
+			operationError._exception = new PlatformException(message, exception);
+			operationError._message = OperationError.McaError.GENERAL_ERROR_MESSAGE;
+		}
 
 		logErrorMessage(_currentOperation, operationError);
 
-		throw PlatformException;
+		theLogger.exception(exception);
 	}
 
 	private void logErrorMessage(IMonitorOperation operation, OperationError operationError) {
@@ -585,7 +586,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			return;
 		}
 		try {
-			logger.info("monitorErrorMessage", operationError._message, _monitoringTask.getTaskDescription(), getAverageTaskTime());
+			theLogger.info("monitorErrorMessage", operationError._message, _monitoringTask.getTaskDescription(), getAverageTaskTime());
 			// Increment the number of errors
 			MonitoringWorkflow._totalErrors++;
 			this.totalErrors++;
@@ -670,7 +671,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 								workflowCreationError("start " + _currentOperation.getOperationsID() + " operation error", doItException);
 							} catch (Exception errException) {
 								// TODO Auto-generated catch block
-								logger.exception(errException);
+								theLogger.exception(errException);
 							}
 						}
 					}
@@ -692,9 +693,9 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			_monitoringTask = null;
 			this._status = WORKFLOW_FINISH;
 			this.recycleForReady();
-			logger.debug("workflowCompleted", MonitoringWorkflow._totalTasks, _monitoringService.getProcessingAverage());
+			theLogger.debug("workflowCompleted", MonitoringWorkflow._totalTasks, _monitoringService.getProcessingAverage());
 		} catch (Exception e) {
-			logger.exception("workflowCompleted", e);
+			theLogger.exception("workflowCompleted", e);
 		} finally {
 			// Setting this to null, will allow the work to be reused.
 
@@ -738,7 +739,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 				try {
 					_storageAdapter.uploadRawData(messageObj);
 				} catch (PlatformException e) {
-					logger.exception("storeResultsMessage", e);
+					theLogger.exception("storeResultsMessage", e);
 				}
 			}
 		}.start();
@@ -757,7 +758,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 						operation.stopIt(_monitoringTask);
 					}
 				} catch (PlatformException e) {
-					logger.exception("completeWorkflowOnError", e);
+					theLogger.exception("completeWorkflowOnError", e);
 				}
 			}
 		} finally {
