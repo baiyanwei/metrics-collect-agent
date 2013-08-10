@@ -61,6 +61,10 @@ public class SSHOperation extends MonitorOperation {
 			metricContent = executeShellCommand(sshConnection, shellCommand);
 		} catch (Exception e) {
 			theLogger.exception(e);
+			this._operationError._exception = new PlatformException(e.getMessage(), e);
+			this.fireError(this._operationError);
+			return;
+
 		} finally {
 			if (sshConnection != null) {
 				try {

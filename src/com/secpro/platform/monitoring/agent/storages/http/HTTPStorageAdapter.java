@@ -173,10 +173,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	@Override
 	public void uploadRawData(Object rawDataObj) throws PlatformException {
 		try {
-			if(true){
-				System.out.println("uploadRawData>>>"+rawDataObj);
-				return;
-			}
+			System.out.println("uploadRawData>>>"+rawDataObj);
 			//
 			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSamplePath, HttpMethod.PUT, rawDataObj.toString());
 			//
@@ -187,7 +184,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			config._synchronousConnection = false;
 			config._httpRequest = httpRequestV2;
 			config._responseListener = new PushDataSampleListener();
-			config._content = null;
+			config._content = rawDataObj.toString();
 			//
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
 			appendRequestHeaderParameters(requestHeadParaMap, 0);
