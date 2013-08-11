@@ -39,7 +39,6 @@ import com.secpro.platform.core.utils.Constants;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
 import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
-import com.secpro.platform.monitoring.agent.services.MonitoringNodeService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 import com.secpro.platform.monitoring.agent.storages.IDataStorage;
@@ -76,12 +75,10 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 
 	final private static String FETCH_MESSAGE_BODY = "ok";
 
-	private MonitoringNodeService _monitoringNodeService = null;
 	private MonitoringService _monitoringService = null;
 
 	@Override
 	public void start() throws PlatformException {
-		_monitoringNodeService = ServiceHelper.findService(MonitoringNodeService.class);
 		_monitoringService = ServiceHelper.findService(MonitoringService.class);
 	}
 
@@ -173,7 +170,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	@Override
 	public void uploadRawData(Object rawDataObj) throws PlatformException {
 		try {
-			System.out.println("uploadRawData>>>"+rawDataObj);
+			System.out.println("uploadRawData>>>" + rawDataObj);
 			//
 			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSamplePath, HttpMethod.PUT, rawDataObj.toString());
 			//
@@ -248,12 +245,12 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		if (content == null) {
 			content = "";
 		}
-		
+
 		// fill the request parameters in to query string.
 		// StringBuilder parametersBuilder = new StringBuilder("?");
 		// parametersBuilder.append("c=&l=&o=");
 		// create HTTP request with query parameter.
-		
+
 		DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, httpMethod, accessPath);
 		// identify HTTP port we use
 		if (80 == this._hostPort.intValue()) {
@@ -261,7 +258,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		} else {
 			request.addHeader(HttpHeaders.Names.HOST, this._hostName + ":" + this._hostPort);
 		}
-		theLogger.info(this._hostName+":"+this._hostPort+accessPath);
+		theLogger.info(this._hostName + ":" + this._hostPort + accessPath);
 		TreeMap<String, String> requestHeaders = new TreeMap<String, String>(new Comparator<String>() {
 			public int compare(String string0, String string1) {
 				return string0.compareToIgnoreCase(string1);
@@ -349,7 +346,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	 * @param workflows
 	 */
 	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount) {
-		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringNodeService._nodeLocation);
+		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringService.getNodeLocation());
 		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflowCount));
 		requestHeadParaMap.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
 	}

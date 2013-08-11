@@ -10,14 +10,13 @@ import java.util.List;
 import java.util.Timer;
 
 import javax.management.DynamicMBean;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
 import javax.xml.bind.annotation.XmlElement;
 
 import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.metrics.AbstractMetricMBean;
 import com.secpro.platform.core.metrics.Metric;
 import com.secpro.platform.core.services.IService;
+import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.services.ServiceInfo;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.Activator;
@@ -35,6 +34,9 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	// Logging Object
 	//
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringService.class);
+	//
+	// usually the provider-dataCenter (HB).
+	private String _nodeLocation = "";
 
 	@XmlElement(name = "messageTimeout", type = Long.class, defaultValue = "120000")
 	public Long _messageTimeout = new Long(120000);
@@ -42,7 +44,7 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	@XmlElement(name = "operationCapabilities", defaultValue = "snmp,ssh")
 	public String _operationCapabilities = "snmp,ssh";
 
-	// Time interval when fetch task from the TSS. 
+	// Time interval when fetch task from the TSS.
 	@XmlElement(name = "fetchTSSTaskInterval", type = Long.class, defaultValue = "2000")
 	public long _fetchTSSTaskInterval = 2000L;
 
@@ -64,9 +66,8 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	// cache the version number
 	@Metric(description = "The version number of MCA")
 	public String _version = Activator._version.toString();
-	
-	public boolean _isFetchCacheTaskOnError=false;
-	
+
+	public boolean _isFetchCacheTaskOnError = false;
 
 	// This is the list of workflows that the task queue will
 	// use to process tasks. the more of these, the more tasks
@@ -84,16 +85,13 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	@Override
 	public void start() throws PlatformException {
 		//
+		MonitoringNodeService nodeService = ServiceHelper.findService(MonitoringNodeService.class);
+		this.setNodeLocation(nodeService._nodeLocation);
+		//
 		// This will create the current workflows.
 		createMonitoringWorkflows(_workflowThreshold.intValue());
 		// register itself as dynamic bean
-		MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-		try {
-			ObjectName objectName = new ObjectName(_jmxObjectName);
-			mBeanServer.registerMBean(this, objectName);
-		} catch (Exception e) {
-			theLogger.exception("JMX error when registering the MonitoringService to JMX", e);
-		}
+		this.registerMBean(_jmxObjectName, this);
 
 		// load the Fetch task timer
 		_fetchTSSTaskTimer = new Timer("MonitoringService._fetchTSSTaskTimer");
@@ -105,28 +103,17 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	@Override
 	public void stop() throws PlatformException {
 		// unregister itself
-		MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
-		try {
-			ObjectName objectName = new ObjectName(_jmxObjectName);
-			mBeanServer.unregisterMBean(objectName);
-
-			// unregister all the MonitoringWorkflow
-			synchronized (_monitoringWorkflows) {
-				Iterator<MonitoringWorkflow> iterator = _monitoringWorkflows.iterator();
-				while (iterator.hasNext() == true) {
-					MonitoringWorkflow workflow = iterator.next();
-					if (workflow._objectName != null)
-						try {
-							mBeanServer.unregisterMBean(workflow._objectName);
-						} catch (Exception e) {
-							theLogger.exception("JMX error when unregistering the MonitoringWorkflow", e);
-						}
-				}
-
-				_monitoringWorkflows = null;
+		this.unRegisterMBean(_jmxObjectName);
+		// unregister all the MonitoringWorkflow
+		synchronized (_monitoringWorkflows) {
+			Iterator<MonitoringWorkflow> iterator = _monitoringWorkflows.iterator();
+			while (iterator.hasNext() == true) {
+				MonitoringWorkflow workflow = iterator.next();
+				if (workflow._jmxObjectName != null)
+					this.unRegisterMBean(workflow._jmxObjectName);
 			}
-		} catch (Exception e) {
-			theLogger.exception("JMX error when unregistering the MonitoringService", e);
+
+			_monitoringWorkflows = null;
 		}
 		_fetchTSSTaskTimer.cancel();
 	}
@@ -203,18 +190,17 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 			try {
 				workflow.start();
 				_monitoringWorkflows.add(workflow);
-				// register workflows as dynamic bean
-				MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+				
 				try {
 					Calendar cal = Calendar.getInstance();
 					long currentTime = System.currentTimeMillis();
 					cal.setTimeInMillis(currentTime);
 
 					// Need to create a unique name for the object.
-					ObjectName objectName = new ObjectName("secpro:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-"
-							+ String.valueOf(_monitoringWorkflows.size()));
-					mBeanServer.registerMBean(workflow, objectName);
-					workflow._objectName = objectName;
+					workflow._jmxObjectName  ="secpro:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-"
+							+ String.valueOf(_monitoringWorkflows.size());
+					// register workflows as dynamic bean
+					this.registerMBean(workflow._jmxObjectName,workflow);
 				} catch (Exception e) {
 					theLogger.exception("createMonitoringWorkflows", e);
 				}
@@ -287,5 +273,21 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 		} else {
 			return System.nanoTime() - this._timeLastTaskFinished;
 		}
+	}
+
+	/**
+	 * @return the _nodeLocation
+	 */
+	@Metric(description = "get the system free memory status")
+	public String getNodeLocation() {
+		return _nodeLocation;
+	}
+
+	/**
+	 * @param _nodeLocation
+	 *            the _nodeLocation to set
+	 */
+	public void setNodeLocation(String nodeLocation) {
+		this._nodeLocation = nodeLocation;
 	}
 }

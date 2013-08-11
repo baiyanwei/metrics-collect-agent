@@ -29,7 +29,6 @@ import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.utils.Utils;
 import com.secpro.platform.log.utils.PlatformLogger;
-import com.secpro.platform.monitoring.agent.Activator;
 import com.secpro.platform.monitoring.agent.operations.IMonitorOperation;
 import com.secpro.platform.monitoring.agent.operations.IOperationListener;
 import com.secpro.platform.monitoring.agent.operations.MonitorOperation;
@@ -59,7 +58,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	public static final long _waitForFetchTime = 10000L;
 	//
 	// Logging Object
-	private static PlatformLogger theLogger = PlatformLogger.getLogger(Activator.class);
+	private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringWorkflow.class);
 
 	//
 	// PUBLIC STATIC FINAL INSTANCE VARIABLES
@@ -113,7 +112,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	public static long _totalTimeOfProcessing = 0;
 
 	// objectName associates with this instance
-	public ObjectName _objectName = null;
+	public String _jmxObjectName = null;
 
 	public long totalErrors = 0;
 

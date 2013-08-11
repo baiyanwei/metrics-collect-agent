@@ -7,13 +7,15 @@ import org.json.JSONObject;
 
 import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.utils.Assert;
+import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.operations.MonitorOperation;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 
 public class SNMPOperation extends MonitorOperation {
-
+	private static PlatformLogger theLogger = PlatformLogger.getLogger(SNMPOperation.class);
 	@Override
 	public void doIt(MonitoringTask task) throws PlatformException {
+		try{
 		// set your collecting result into message.
 		System.out.println("SNMPOperation>>do task:" + task.getTaskDescription());
 		// get task meta data
@@ -72,6 +74,12 @@ public class SNMPOperation extends MonitorOperation {
 				task.getTimestamp(), task.getPropertyString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME), "mib", new JSONObject(metricMap).toString());
 		this._monitoringWorkflow.createResultsMessage(this._operationID, messageInputAndRequestHeaders);
 		this.fireCompletedSuccessfully();
+		}catch(Exception e){
+			theLogger.exception(e);
+			this._operationError._exception = new PlatformException(e.getMessage(), e);
+			this.fireError(this._operationError);
+			return;
+		}
 	}
 
 	@Override

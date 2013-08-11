@@ -52,9 +52,63 @@ public class SysLogBeaconInterface implements IService {
 		new Thread(){
 			public void run(){
 				launchingSyslogReceive();
+				//
+				try {
+					sleep(10000L);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				while(true){
+					try{
+						String ip = new String("10.1.1.1");
+						String cdate = timedf.format(new Date());
+						String msg = "firewall_ip:" + ip + "," + "reseiveDate:" + cdate + ",msg=" + "test";
+						System.out.println(msg);
+						JSONObject syslog = new JSONObject();
+						syslog.put("hostIP", ip);
+						syslog.put("cdate", cdate);
+						syslog.put("msg", "test");
+						// add the syslog to queue
+						System.out.println(">>>>>>>>>add syslog");
+						_sysLogStore.addSyslog(syslog);
+						sleep(1000l);
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+				}
 			}
 		}.start();
-		
+		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+		new Thread(){
+			public void run(){
+				//
+				try {
+					sleep(10000L);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				while(true){
+					try{
+						String ip = new String("10.1.1.1");
+						String cdate = timedf.format(new Date());
+						String msg = "firewall_ip:" + ip + "," + "reseiveDate:" + cdate + ",msg=" + "test";
+						System.out.println(msg);
+						JSONObject syslog = new JSONObject();
+						syslog.put("hostIP", ip);
+						syslog.put("cdate", cdate);
+						syslog.put("msg", "test");
+						// add the syslog to queue
+						System.out.println(">>>>>>>>>add syslog");
+						_sysLogStore.addSyslog(syslog);
+						sleep(1000l);
+					}catch(Exception e){
+						e.printStackTrace();
+					}
+				}
+			}
+		}.start();
 	}
 
 	@Override

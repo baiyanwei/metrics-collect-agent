@@ -24,7 +24,7 @@ public class MetricUploadService implements IService {
 	final public static String UPLOAD_MODE_POOL = "pool";
 	final public static String UPLOAD_MODE_DIRECTLY = "directly";
 
-	@XmlElement(name = "uploadMode", defaultValue = "pool")
+	@XmlElement(name = "uploadMode", defaultValue = "directly")
 	public String _uploadMode = "";
 
 	@XmlElement(name = "isUploadMetricInPackage", type = Boolean.class, defaultValue = "120000")
@@ -96,7 +96,7 @@ public class MetricUploadService implements IService {
 					_storageAdapter = ServiceHelper.findService(StorageAdapterService.class);
 				}
 				// upload to DTSS
-				_storageAdapter.uploadRawData(metricObj);
+				_storageAdapter.uploadRawData(formatMessage(metricObj));
 			} catch (PlatformException e) {
 				e.printStackTrace();
 			}
@@ -170,7 +170,7 @@ public class MetricUploadService implements IService {
 		}
 		try {
 			// upload to DTSS
-			_storageAdapter.uploadRawData(messageObject);
+			_storageAdapter.uploadRawData(formatMessage(messageObject));
 		} catch (PlatformException e) {
 			e.printStackTrace();
 		}
@@ -199,5 +199,17 @@ public class MetricUploadService implements IService {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	private JSONObject formatMessage(Object message) {
+		JSONObject packageMessage = new JSONObject();
+		try {
+			packageMessage.put("timestamp", System.currentTimeMillis());
+			packageMessage.put("body", message);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return packageMessage;
 	}
 }

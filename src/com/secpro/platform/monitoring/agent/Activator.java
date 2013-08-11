@@ -7,7 +7,9 @@ import org.osgi.framework.ServiceListener;
 import org.osgi.framework.Version;
 
 import com.secpro.platform.core.services.ServiceHelper;
+import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.bri.SysLogBeaconInterface;
+import com.secpro.platform.monitoring.agent.services.MetricStandardService;
 import com.secpro.platform.monitoring.agent.services.MetricUploadService;
 import com.secpro.platform.monitoring.agent.services.MonitoringEncryptService;
 import com.secpro.platform.monitoring.agent.services.MonitoringNodeService;
@@ -16,7 +18,17 @@ import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 import com.secpro.platform.monitoring.agent.storages.http.HTTPStorageAdapter;
 
+/**
+ * @author baiyanwei
+ * Aug 10, 2013
+ *
+ * The MCA Activator
+ *
+ */
 public class Activator implements BundleActivator, ServiceListener {
+	// Logging Object
+	private static PlatformLogger theLogger = PlatformLogger.getLogger(Activator.class);
+
 	public static Version _version = null;
 	private static BundleContext _context = null;
 
@@ -28,16 +40,14 @@ public class Activator implements BundleActivator, ServiceListener {
 	 * )
 	 */
 	public void start(BundleContext context) throws Exception {
+		theLogger.info("start the metric collect agent service");
 		_context = context;
 		_version = context.getBundle().getVersion();
 		registerServices();
-		// synchronized (check_necessary_services) {
-		// if (ServiceHelper.findService(NodeService.class) == null) {
-		// check_necessary_services.add(NodeService.class);
-		// }
-
-		// _context.addServiceListener(this);
-		// }
+		// We need to register we are going to be running a TPU
+		registerNode();
+		_context.addServiceListener(this);
+		theLogger.info("The metric collect agent service stared complete");
 
 	}
 
@@ -59,21 +69,16 @@ public class Activator implements BundleActivator, ServiceListener {
 	public void serviceChanged(ServiceEvent event) {
 
 		if (event.getType() == ServiceEvent.REGISTERED) {
-			// Object service =
-			// _context.getService(event.getServiceReference());
-			// synchronized (check_necessary_services) {
-			// if (check_necessary_services.contains(service.getClass())) {
-			// check_necessary_services.remove(service.getClass());
-			// }
-			// if (check_necessary_services.isEmpty()) {
-			try {
-				_context.removeServiceListener(this);
-				registerServices();
-			} catch (Exception e) {
-				e.printStackTrace();
+			Object service = _context.getService(event.getServiceReference());
+			if (service.getClass() == MetricStandardService.class) {
+				try {
+					_context.removeServiceListener(this);
+					// SYSLOG interface service
+					ServiceHelper.registerService(new SysLogBeaconInterface());
+				} catch (Exception e) {
+					theLogger.exception(e);
+				}
 			}
-			// }
-			// }
 		}
 
 	}
@@ -91,41 +96,16 @@ public class Activator implements BundleActivator, ServiceListener {
 		ServiceHelper.registerService(new MonitoringTaskCacheService());
 		//
 		ServiceHelper.registerService(new HTTPStorageAdapter());
-		
 		//
 		ServiceHelper.registerService(new StorageAdapterService());
-		//
 		// Monitoring Service Mca main logic.
 		ServiceHelper.registerService(new MonitoringService());
-		//
-		//start metric upload service.
+		// start metric upload service.
 		ServiceHelper.registerService(new MetricUploadService());
+		//
+		ServiceHelper.registerService(new MetricStandardService());
 		
-		ServiceHelper.registerService(new SysLogBeaconInterface());
 		
-		
-		//
-
-		// _context.addServiceListener(new ServiceListener() {
-		//
-		// @Override
-		// public void serviceChanged(ServiceEvent event) {
-		// if (event.getType() == ServiceEvent.REGISTERED) {
-		// Object[] obj = (Object[])
-		// event.getServiceReference().getProperty("objectClass");
-		// if (obj[0].equals(LoggingService.class.getName())) {
-		//
-		// MonitoringNodeService mNodeService =
-		// OSGiServiceHelper.findService(MonitoringNodeService.class);
-		// mNodeService.updateLoggingPrefix();
-		// _context.removeServiceListener(this);
-		// }
-		// }
-		// }
-		//
-		// });
-		// We need to register we are going to be running a TPU
-		registerNode();
 	}
 
 	/**
@@ -136,21 +116,24 @@ public class Activator implements BundleActivator, ServiceListener {
 		// We need to register we are going to be running a TPU
 		try {
 			//
-			((MonitoringNodeService) ServiceHelper.findService(MonitoringNodeService.class)).registerNode();
+			MonitoringNodeService nodeService = ServiceHelper.findService(MonitoringNodeService.class);
+			nodeService.registerNode();
 			// We are broadcasting to everyone that we are ready for business.
-			((MonitoringNodeService) ServiceHelper.findService(MonitoringNodeService.class)).nodeStarted();
+			nodeService.nodeStarted();
+			
 		} catch (Exception e) {
-			e.printStackTrace();
+			theLogger.exception(e);
 		}
 	}
 
 	private void unregisterNode() {
 		try {
 			// We are broadcasting to everyone that we are going offline.
-			((MonitoringNodeService) ServiceHelper.findService(MonitoringNodeService.class)).nodeStopped();
-			((MonitoringNodeService) ServiceHelper.findService(MonitoringNodeService.class)).unregisterNode();
+			MonitoringNodeService nodeService = ServiceHelper.findService(MonitoringNodeService.class);
+			nodeService.nodeStopped();
+			nodeService.unregisterNode();
 		} catch (Exception e) {
-			e.printStackTrace();
+			theLogger.exception(e);
 		}
 	}
 }
