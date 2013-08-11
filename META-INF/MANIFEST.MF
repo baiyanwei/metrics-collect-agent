@@ -13,4 +13,10 @@ Require-Bundle: org.eclipse.core.runtime,
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Import-Package: ch.ethz.ssh2,
- org.json
+ org.json,
+ org.snmp4j,
+ org.snmp4j.mp,
+ org.snmp4j.security,
+ org.snmp4j.smi,
+ org.snmp4j.transport
+Bundle-ClassPath: .
