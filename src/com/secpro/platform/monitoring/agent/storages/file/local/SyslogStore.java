@@ -1,4 +1,4 @@
-package com.secpro.platform.monitoring.agent.bri.syslog;
+package com.secpro.platform.monitoring.agent.storages.file.local;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -13,6 +13,7 @@ import org.json.JSONObject;
 
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.monitoring.agent.bri.SysLogBeaconInterface;
+import com.secpro.platform.monitoring.agent.services.MetricStandardService;
 import com.secpro.platform.monitoring.agent.services.MetricUploadService;
 
 /**
@@ -24,6 +25,7 @@ import com.secpro.platform.monitoring.agent.services.MetricUploadService;
 public class SyslogStore {
 	private SysLogBeaconInterface _sysLogBeaconInterface = null;
 	private MetricUploadService _metricUploadService = null;
+	private MetricStandardService _metricStandardService = null;
 	private SimpleDateFormat timedf1 = new SimpleDateFormat("yyyyMMddHH");
 	private PrintStream out;
 	private Queue<JSONObject> syslogs = new LinkedList<JSONObject>();
@@ -66,6 +68,9 @@ public class SyslogStore {
 	 * syslog日志存储方法
 	 */
 	public void storeSyslog() {
+		if (_metricStandardService == null) {
+			_metricStandardService = ServiceHelper.findService(MetricStandardService.class);
+		}
 		try {
 
 			// 判断文件流日否为空，如为空时创建文件流
@@ -100,7 +105,7 @@ public class SyslogStore {
 							String ip = syslog.getString("hostIP");
 							String msg = syslog.getString("msg");
 							String cdate = syslog.getString("cdate");
-							Map<String, String> syslogMap = SyslogStandard.matcher(ip, msg);
+							Map<String, String> syslogMap = _metricStandardService.matcher(ip, "", msg);
 							JSONObject syslogFormt = new JSONObject();
 							syslogFormt.put("operation", "syslog");
 							syslogFormt.put("hostIP", ip);
@@ -146,7 +151,7 @@ public class SyslogStore {
 						String ip = syslog.getString("hostIP");
 						String msg = syslog.getString("msg");
 						String cdate = syslog.getString("cdate");
-						Map<String, String> syslogMap = SyslogStandard.matcher(ip, msg);
+						Map<String, String> syslogMap = _metricStandardService.matcher(ip, "", msg);
 						JSONObject syslogFormt = new JSONObject();
 						syslogFormt.put("operation", "syslog");
 						syslogFormt.put("hostIP", ip);

@@ -12,7 +12,7 @@ import org.json.JSONObject;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceInfo;
 import com.secpro.platform.log.utils.PlatformLogger;
-import com.secpro.platform.monitoring.agent.bri.syslog.SyslogStore;
+import com.secpro.platform.monitoring.agent.storages.file.local.SyslogStore;
 
 /**
  * @author baiyanwei Jul 21, 2013

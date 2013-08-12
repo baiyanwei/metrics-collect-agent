@@ -56,22 +56,22 @@ public class MonitoringTaskCacheService implements IService {
 	 */
 	@XmlElement(name = "prefixTaskName", defaultValue = "task")
 	public String _prefixTaskName;
-	//TODO remove later
+	// TODO remove later
 	@XmlElement(name = "taskExecuteHour", type = Long.class, defaultValue = "21")
 	public Long _taskExecuteHour;
 	@XmlElement(name = "taskExecMin", type = Long.class, defaultValue = "45")
 	public Long _taskExecMin;
 	@XmlElement(name = "taskExecSec", type = Long.class, defaultValue = "0")
 	public Long _taskExecSec;
-	//END remove later
+	// END remove later
 	@XmlElement(name = "taskNameTimeFormat1", defaultValue = "yyyyMMdd")
 	public String _taskNameTimeFormat1 = "yyyyMMdd";
 
 	@XmlElement(name = "taskNameTimeFormat2", defaultValue = "yyyyMMddHHmmss")
 	public String _taskNameTimeFormat2 = "yyyyMMddHHmmss";
 
-	@XmlElement(name = "taskTimerExecuteInterval", type = Long.class, defaultValue = "120000")
-	public long _taskTimerExecuteInterval = 120000;
+	@XmlElement(name = "taskTimerExecuteInterval", type = Long.class, defaultValue = "86400000")
+	public long _taskTimerExecuteInterval = 86400000;
 	//
 	private SimpleDateFormat _taskNameDataFormat1 = null;
 	private SimpleDateFormat _taskNameDataFormat2 = null;
@@ -91,8 +91,12 @@ public class MonitoringTaskCacheService implements IService {
 		loadLocalTaskByFile();
 		//
 		if (_isflag) {
+			Date today = new Date();
+			@SuppressWarnings("deprecation")
+			Date tomorrow = new Date(today.getYear(), today.getMonth(), today.getDate() + 1, 0, 0, 0);
 			_taskManageTimer = new Timer("MonitoringTaskCacheService._taskManageTimer");
-			_taskManageTimer.schedule(new CacheTaskManageAction(this), 20000L, _taskTimerExecuteInterval);
+			// start on tomorrow 0:00
+			_taskManageTimer.schedule(new CacheTaskManageAction(this), tomorrow.getTime() - today.getTime(), _taskTimerExecuteInterval);
 		}
 		theLogger.info("startUp");
 	}
