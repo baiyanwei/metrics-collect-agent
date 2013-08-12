@@ -105,7 +105,7 @@ public class SyslogStore {
 							String ip = syslog.getString("hostIP");
 							String msg = syslog.getString("msg");
 							String cdate = syslog.getString("cdate");
-							Map<String, String> syslogMap = _metricStandardService.matcher(ip, "", msg);
+							Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 							JSONObject syslogFormt = new JSONObject();
 							syslogFormt.put("operation", "syslog");
 							syslogFormt.put("hostIP", ip);
@@ -151,7 +151,7 @@ public class SyslogStore {
 						String ip = syslog.getString("hostIP");
 						String msg = syslog.getString("msg");
 						String cdate = syslog.getString("cdate");
-						Map<String, String> syslogMap = _metricStandardService.matcher(ip, "", msg);
+						Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 						JSONObject syslogFormt = new JSONObject();
 						syslogFormt.put("operation", "syslog");
 						syslogFormt.put("hostIP", ip);

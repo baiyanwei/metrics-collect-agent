@@ -177,17 +177,33 @@ public class FetchSysLogStandardRuleAction extends Thread {
 	 * @return
 	 */
 	private boolean checkForRuleFormat(JSONObject ruleObject) {
-
+		/*
+		{
+			ip string
+			regexs Map
+			protoFormat Map
+			num int
+			dateFormat string
+		}
+		*/
 		if (ruleObject.has("ip") == false) {
 			theLogger.warn("errorRuleFormat", "ip");
 			return false;
 		}
-		if (ruleObject.has("type") == false) {
-			theLogger.warn("errorRuleFormat", "type");
+		if (ruleObject.has("num") == false) {
+			theLogger.warn("errorRuleFormat", "num");
 			return false;
 		}
-		if (ruleObject.has("rule") == false) {
-			theLogger.warn("errorRuleFormat", "rule");
+		if (ruleObject.has("protoFormat") == false) {
+			theLogger.warn("errorRuleFormat", "protoFormat");
+			return false;
+		}
+		if (ruleObject.has("dateFormat") == false) {
+			theLogger.warn("errorRuleFormat", "dateFormat");
+			return false;
+		}
+		if (ruleObject.has("regexs") == false) {
+			theLogger.warn("errorRuleFormat", "regexs");
 			return false;
 		}
 		return true;

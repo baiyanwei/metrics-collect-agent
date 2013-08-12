@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -85,24 +84,22 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @param regexs
 	 * @return
 	 */
-	public JSONObject buildRule(String ip, String type, List<String> regexs) {
-		if (Assert.isEmptyString(ip) == true || Assert.isEmptyString(type) == true) {
+	public JSONObject buildRule(String ip,JSONObject ruleObj) {
+		if (Assert.isEmptyString(ip) == true||ruleObj == null) {
 			return null;
 		}
-		if (regexs == null || regexs.isEmpty() == true) {
-			return null;
-		}
-		String ruleKey = ip + "_" + type;
-		JSONObject ruleObj = new JSONObject();
-		try {
-			ruleObj.put("ip", ip);
-			ruleObj.put("type", type);
-			ruleObj.put("rule", regexs);
-		} catch (JSONException e) {
-			theLogger.exception(e);
-		}
+		//String ruleKey = ip + "_" + t;
+		//JSONObject ruleObj = new JSONObject();
+		//try {
+			//ruleObj.put("ip", ip);
+			//ruleObj.put("type", type);
+		// ruleObj.put("rule", regexs);
+		// } catch (JSONException e) {
+		// theLogger.exception(e);
+		// }
 		synchronized (this._metricStandardRuleMap) {
-			this._metricStandardRuleMap.put(ruleKey, ruleObj);
+			//this._metricStandardRuleMap.put(ruleKey, ruleObj);
+			this._metricStandardRuleMap.put(ip, ruleObj);
 		}
 		return ruleObj;
 	}
@@ -113,12 +110,15 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		}
 
 		try {
-			if (ruleObj.has("rule") == false || ruleObj.get("rule") == null) {
+			if (ruleObj.has("ip") == false || ruleObj.get("ip") == null) {
 				return null;
 			}
-			String ruleKey = ruleObj.getString("ip") + "_" + ruleObj.getString("type");
+			if (ruleObj.has("regexs") == false || ruleObj.get("regexs") == null) {
+				return null;
+			}
+			//String ruleKey = ruleObj.getString("ip") + "_" + ruleObj.getString("type");
 			synchronized (this._metricStandardRuleMap) {
-				this._metricStandardRuleMap.put(ruleKey, ruleObj);
+				this._metricStandardRuleMap.put(ruleObj.getString("ip"), ruleObj);
 			}
 		} catch (JSONException e) {
 			theLogger.exception(e);
@@ -134,8 +134,8 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @param regexs
 	 * @return
 	 */
-	public boolean changeRule(String ip, String type, List<String> regexs) {
-		return buildRule(ip, type, regexs) == null ? false : true;
+	public boolean changeRule(String ip,JSONObject ruleObj) {
+		return buildRule(ip, ruleObj) == null ? false : true;
 
 	}
 
@@ -145,24 +145,20 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @param ip
 	 * @return
 	 */
-	public JSONObject removeRule(String ip, String type) {
-		if (Assert.isEmptyString(ip) == true || Assert.isEmptyString(type) == true) {
+	public JSONObject removeRule(String ip) {
+		if (Assert.isEmptyString(ip) == true) {
 			return null;
 		}
 		synchronized (this._metricStandardRuleMap) {
-			return this._metricStandardRuleMap.remove(ip + "_" + type);
+			return this._metricStandardRuleMap.remove(ip);
 		}
 	}
 
-	public JSONObject findRegexs(String ip, String type) {
-		if (Assert.isEmptyString(ip) == true || Assert.isEmptyString(type) == true) {
+	public JSONObject findRegexs(String ip) {
+		if (Assert.isEmptyString(ip) == true) {
 			return null;
 		}
-		String ruleKey = ip + "_" + type;
-		if (this._metricStandardRuleMap.containsKey(ruleKey)) {
-			return null;
-		}
-		return this._metricStandardRuleMap.get(ruleKey);
+		return this._metricStandardRuleMap.get(ip);
 	}
 
 	// private HashMap<String, String> matcherSyslog(String syslog, String
@@ -220,11 +216,11 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @param syslog
 	 * @return
 	 */
-	public HashMap<String, String> matcher(String ip, String type, String syslog) {
+	public HashMap<String, String> matcher(String ip, String syslog) {
 		if (Assert.isEmptyString(syslog) == true) {
 			return null;
 		}
-		JSONObject standardRuleObj = findRegexs(ip, type);
+		JSONObject standardRuleObj = findRegexs(ip);
 		if (standardRuleObj == null) {
 			return null;
 		}
