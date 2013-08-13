@@ -66,6 +66,7 @@ public class CacheTaskManageAction extends TimerTask {
 				if (diffDate(new Date(), execTime) >= 2) {
 					// TODO delete the old task.
 					// TaskPool.getAndRemoveTask();
+					_monitoringTaskCacheService.getTaskCacheQueue().remove(oneTaskObj);
 					count++;
 				} else {
 					break;

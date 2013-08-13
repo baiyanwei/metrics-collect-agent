@@ -190,18 +190,18 @@ public class FetchSysLogStandardRuleAction extends Thread {
 			theLogger.warn("errorRuleFormat", "ip");
 			return false;
 		}
-		if (ruleObject.has("num") == false) {
-			theLogger.warn("errorRuleFormat", "num");
-			return false;
-		}
-		if (ruleObject.has("protoFormat") == false) {
-			theLogger.warn("errorRuleFormat", "protoFormat");
-			return false;
-		}
-		if (ruleObject.has("dateFormat") == false) {
-			theLogger.warn("errorRuleFormat", "dateFormat");
-			return false;
-		}
+//		if (ruleObject.has("num") == false) {
+//			theLogger.warn("errorRuleFormat", "num");
+//			return false;
+//		}
+//		if (ruleObject.has("protoFormat") == false) {
+//			theLogger.warn("errorRuleFormat", "protoFormat");
+//			return false;
+//		}
+//		if (ruleObject.has("dateFormat") == false) {
+//			theLogger.warn("errorRuleFormat", "dateFormat");
+//			return false;
+//		}
 		if (ruleObject.has("regexs") == false) {
 			theLogger.warn("errorRuleFormat", "regexs");
 			return false;

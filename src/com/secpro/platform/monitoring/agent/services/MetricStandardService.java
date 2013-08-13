@@ -233,7 +233,7 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 
 			int flag = 0;
 
-			String[] properties = JSONObject.getNames(standardRuleObj);
+			String[] properties = JSONObject.getNames(regexs);
 			for (int i = 0; i < properties.length; i++) {
 				String property = properties[i];
 				String regex = regexs.getString(property);
@@ -242,8 +242,8 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 
 				if (mat.find()) {
 					if (property != null && !("".equals(property))) {
-						if ("proto".equals(property)) {
-							String value = protoFormat(standardRuleObj, mat.group(1));
+						if ("protocol".equals(property)) {
+							String value = protocolFormat(standardRuleObj, mat.group(1));
 
 							result.put(property, value);
 							flag++;
@@ -280,21 +280,19 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @param before
 	 * @return
 	 */
-	private static String protoFormat(JSONObject standardRuleObj, String before) {
-		JSONObject ProtoFormatObj;
+	private static String protocolFormat(JSONObject standardRuleObj, String before) {
 		try {
-			ProtoFormatObj = standardRuleObj.getJSONObject("ProtoFormat");
-			if (ProtoFormatObj != null) {
-				String value = ProtoFormatObj.getString(before);
-
-				if (value != null && !("".equals(value)))
-
-				{
-					return value;
-				} else {
-					return before;
-				}
+			if (standardRuleObj.has("protocolFormat") == false || standardRuleObj.get("protocolFormat") == null) {
+				return null;
 			}
+			JSONObject ProtoFormatObj = standardRuleObj.getJSONObject("protocolFormat");
+			if(ProtoFormatObj.has(before) == false || ProtoFormatObj.get(before) == null)
+			{
+				return before;
+			}
+				
+			String value = ProtoFormatObj.getString(before);
+			return value;
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -305,10 +303,14 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 
 	private static String dateFormat(JSONObject standardRuleObj, String dateS) {
 		try {
-			String dateFormat = standardRuleObj.getString("dataFormat");
-			String before = dateS.trim();
+	
+			if (standardRuleObj.has("dateFormat") == false || standardRuleObj.get("dateFormat") == null) {
+				return dateS;
+			}
+			String dateFormat = standardRuleObj.getString("dateFormat");
+			
 			String after = null;
-			if (dateFormat != null && !("".equals(dateFormat))) {
+			
 				if (dateFormat.indexOf("y") == -1) {
 
 					Calendar calendar = Calendar.getInstance();
@@ -339,12 +341,10 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 
 					}
 				}
-
-			}
-			return before;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return null;
+		return dateS;
 	}
+
 }

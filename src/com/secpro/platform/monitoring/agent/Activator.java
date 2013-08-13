@@ -104,7 +104,7 @@ public class Activator implements BundleActivator, ServiceListener {
 		ServiceHelper.registerService(new MetricUploadService());
 		//
 		ServiceHelper.registerService(new MetricStandardService());
-		
+		ServiceHelper.registerService(new SysLogBeaconInterface());
 		
 	}
 
