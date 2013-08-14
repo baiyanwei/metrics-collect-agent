@@ -47,20 +47,20 @@ public class SNMPCollectAdapter {
 	 * @return
 	 */
 	public static HashMap<String,String> snmpAllVer(SNMPReferentBean snmp){
-		Address targetAddress=null;
-		HashMap<String,String> resultMap=null;
-		int portDefault=161;
-		int version=snmp.getVersion();
 		String targetIP=snmp.getTargetIP();
-		int port=snmp.getPort();
-		List<String> mibList=snmp.getMibList();
-		if(port!=0){
-			portDefault=port;
-		}
+		HashMap<String,String> resultMap=null;
+		
 		if(isboolIP(targetIP))
 		{
-			targetAddress=GenericAddress.parse("udp:"+targetIP+"/"+portDefault);
+			int portDefault=161;
+			List<String> mibList=snmp.getMibList();
+			int port=snmp.getPort();
+			if(port!=0){
+				portDefault=port;
+			}
+			Address targetAddress=GenericAddress.parse("udp:"+targetIP+"/"+portDefault);
 			if(mibList!=null&&mibList.size()>0){
+				int version=snmp.getVersion();
 				try{
 					if(version==1){
 						String community=snmp.getCommunity();
@@ -89,13 +89,11 @@ public class SNMPCollectAdapter {
 					else{
 						System.out.println("snmp version error,without this version");
 					}
-				}catch(IOException e) {
+				}catch(Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}catch(IllegalArgumentException e){
-					e.printStackTrace();
 				}
-			}else{
+				}else{
 				System.out.println("mib OID is null");
 			}
 		}
@@ -106,6 +104,7 @@ public class SNMPCollectAdapter {
 		return resultMap;
 		
 	}
+
 
 	/**
 	 * the method process snmp version3
