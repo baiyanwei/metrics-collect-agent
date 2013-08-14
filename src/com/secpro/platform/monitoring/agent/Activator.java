@@ -43,10 +43,10 @@ public class Activator implements BundleActivator, ServiceListener {
 		theLogger.info("start the metric collect agent service");
 		_context = context;
 		_version = context.getBundle().getVersion();
+		_context.addServiceListener(this);
 		registerServices();
 		// We need to register we are going to be running a TPU
 		registerNode();
-		_context.addServiceListener(this);
 		theLogger.info("The metric collect agent service stared complete");
 
 	}
