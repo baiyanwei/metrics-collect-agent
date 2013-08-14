@@ -1,16 +1,12 @@
 package com.secpro.platform.monitoring.agent.storages.http;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.secpro.platform.api.client.IClientResponseListener;
 import com.secpro.platform.core.exception.PlatformException;
-import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
-import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
-import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 
 /**
  * @author baiyanwei Jul 13, 2013
