@@ -108,7 +108,7 @@ public class SyslogStore {
 							Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 							//如果解析出来的数据小于2个将不上传服务器，直接丢弃（一般都会有时间和类型）
 							//调试阶段暂时设置为0，后续调整为配置方式
-							if(syslogMap!=null&&syslogMap.size()>0){
+							if(syslogMap!=null&&syslogMap.size()>=0){
 								JSONObject syslogFormt = new JSONObject();
 								JSONObject sys=new JSONObject();
 								sys.put("ip", ip);
@@ -165,7 +165,7 @@ public class SyslogStore {
 						Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 						//如果解析出来的数据小于2个将不上传服务器，直接丢弃（一般都会有时间和类型）
 						//调试阶段暂时设置为0，后续调整为配置方式
-						if(syslogMap!=null&&syslogMap.size()>0){
+						if(syslogMap!=null&&syslogMap.size()>=0){
 							JSONObject syslogFormt = new JSONObject();
 							JSONObject sys=new JSONObject();
 							sys.put("ip", ip);

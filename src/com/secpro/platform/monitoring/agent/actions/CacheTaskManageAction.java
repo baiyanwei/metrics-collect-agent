@@ -50,7 +50,7 @@ public class CacheTaskManageAction extends TimerTask {
 
 	private void removeTask() {
 		// TODO Auto-generated method stub
-		System.out.println("========================开始删除任务池中两天前的任务==========================");
+		System.out.println("========================start remove task two days ago==========================");
 		int count = 0;
 		int sum = _monitoringTaskCacheService.getTaskCacheQueueSize();
 		System.out.println("size=" + sum);
@@ -78,6 +78,6 @@ public class CacheTaskManageAction extends TimerTask {
 				theLogger.exception("Task Content Format Error", e);
 			}
 		}
-		System.out.println("============结束删除任务池中两天前的任务，共计删除:" + count + "个任务==================");
+		System.out.println("============remove task end ，total:" + count + " task removed==================");
 	}
 }
