@@ -56,7 +56,6 @@ public class SysLogBeaconInterface implements IService {
 				try {
 					sleep(10000L);
 				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			}

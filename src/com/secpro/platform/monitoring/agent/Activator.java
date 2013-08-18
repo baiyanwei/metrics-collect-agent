@@ -46,7 +46,6 @@ public class Activator implements BundleActivator, ServiceListener {
 		_context.addServiceListener(this);
 		registerServices();
 		// We need to register we are going to be running a TPU
-		registerNode();
 		theLogger.info("The metric collect agent service stared complete");
 
 	}
@@ -90,6 +89,8 @@ public class Activator implements BundleActivator, ServiceListener {
 	private void registerServices() throws Exception {
 		//
 		ServiceHelper.registerService(new MonitoringNodeService());
+		//
+		registerNode();
 		//
 		ServiceHelper.registerService(new MonitoringEncryptService());
 		//
