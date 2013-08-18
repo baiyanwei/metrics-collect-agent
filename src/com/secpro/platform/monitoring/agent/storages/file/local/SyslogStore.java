@@ -200,7 +200,7 @@ public class SyslogStore {
 	 * @return
 	 */
 	private boolean compareDate() {
-		String logFileName = _sysLogBeaconInterface._sysLogPath + timedf1.format(new Date());
+		String logFileName = _sysLogBeaconInterface._sysLogName + timedf1.format(new Date());
 		if (logFileName.equals(lastDate)) {
 			return true;
 		}
