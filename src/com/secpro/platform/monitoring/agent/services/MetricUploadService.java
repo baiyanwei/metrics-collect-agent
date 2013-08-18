@@ -113,6 +113,7 @@ public class MetricUploadService implements IService {
 	 * @return
 	 */
 	public JSONArray getUploadMetric() {
+		
 		JSONArray packageObject = new JSONArray();
 		byte[] metricContentArray = null;
 		synchronized (this._uploadMetricQueue) {
