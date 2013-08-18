@@ -53,6 +53,10 @@ public class FetchSysLogStandardRuleAction extends Thread {
 	@Override
 	public void run() {
 		theLogger.info("fetchRule");
+		try {
+			Thread.sleep(10000L);
+		} catch (InterruptedException e) {
+		}
 		executeFetchStandardRule();
 	}
 
