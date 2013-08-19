@@ -16,8 +16,17 @@ Import-Package: ch.ethz.ssh2,
  it.sauronsoftware.base64,
  org.json,
  org.snmp4j,
+ org.snmp4j.asn1,
+ org.snmp4j.event,
+ org.snmp4j.log,
  org.snmp4j.mp,
  org.snmp4j.security,
  org.snmp4j.smi,
- org.snmp4j.transport
+ org.snmp4j.test,
+ org.snmp4j.tools.console,
+ org.snmp4j.transport,
+ org.snmp4j.transport.ssh,
+ org.snmp4j.transport.tls,
+ org.snmp4j.util,
+ org.snmp4j.version
 Bundle-ClassPath: .

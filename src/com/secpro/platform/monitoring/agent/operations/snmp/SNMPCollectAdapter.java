@@ -125,12 +125,12 @@ public class SNMPCollectAdapter {
 		OID authID=AuthMD5.ID;
 		OID privID=PrivDES.ID;
 		int securityLevel=SecurityLevel.AUTH_PRIV;
-		if(auth!=null)
+		if(auth!=null&&!("".equals(auth)))
 		{
 			if(auth.toLowerCase().equals("sha")){
 				authID=AuthSHA.ID;
 			}
-			if(priv!=null){
+			if(priv!=null&&!("".equals(priv))){
 				if(priv.toLowerCase().equals("aes128")){
 					privID=PrivAES128.ID;
 				}else if(priv.toLowerCase().equals("aes192")){
@@ -148,14 +148,15 @@ public class SNMPCollectAdapter {
 		else{
 			securityLevel=SecurityLevel.NOAUTH_NOPRIV;
 		}
-		if(authPass==null)
+		if(authPass==null||"".equals(authPass))
 		{
 			authPass="aaaaaaaa";
 		}
-		if(privPass==null)
+		if(privPass==null||"".equals(privPass))
 		{
 			privPass="aaaaaaaa";
 		}
+		//System.out.println(securityLevel);
 		TransportMapping transport = new DefaultUdpTransportMapping();
 		Snmp snmp = new Snmp(transport);
 		MPv3 mpv3 =
