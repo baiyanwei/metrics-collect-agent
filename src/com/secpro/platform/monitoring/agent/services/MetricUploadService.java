@@ -40,33 +40,24 @@ public class MetricUploadService implements IService {
 	 */
 	@XmlElement(name = "maxLimitPackageSize", type = Long.class, defaultValue = "5120")
 	public long _maxLimitPackageSize = 5120;
+	
+	@XmlElement(name = "uploadThreadMax", type = Long.class, defaultValue = "6")
+	public long _uploadThreadMax = 6;
 
 	/**
 	 * waiting upload queue.
 	 */
 	private ArrayList<byte[]> _uploadMetricQueue = new ArrayList<byte[]>();
 
-	Thread _uploadThread = null;
+	Thread[] _uploadThreads = null;
 
 	private StorageAdapterService _storageAdapter = null;
 
 	@Override
 	public void start() throws Exception {
 		if (UPLOAD_MODE_POOL.equalsIgnoreCase(_uploadMode)) {
-			this._uploadThread = new Thread() {
-				public void run() {
-					while (true) {
-						try {
-							// upload the raw data to server
-							uploadMetricInPackage();
-							sleep(1000L);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-				}
-			};
-			this._uploadThread.start();
+			_uploadThreads = new Thread[6];
+			initUploadThread(_uploadThreads);
 		}
 		_storageAdapter = ServiceHelper.findService(StorageAdapterService.class);
 	}
@@ -74,9 +65,37 @@ public class MetricUploadService implements IService {
 	@SuppressWarnings("deprecation")
 	@Override
 	public void stop() throws Exception {
-		if (this._uploadThread != null) {
-			// stop the upload thread
-			this._uploadThread.stop();
+		if (this._uploadThreads != null) {
+			for (int i = 0; i < _uploadThreads.length; i++) {
+				if (_uploadThreads[i] != null) {
+					try {
+						_uploadThreads[i].stop();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+				}
+			}
+		}
+	}
+
+	private void initUploadThread(Thread[] uploadThreads) {
+		for (int i = 0; i < uploadThreads.length; i++) {
+			uploadThreads[i] = new Thread("MetricUploadService.uploadThread#" + i) {
+				public void run() {
+					while (true) {
+						try {
+							sleep(2000L);
+							// upload the raw data to server
+							uploadMetricInPackage();
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}
+
+			};
+			uploadThreads[i].start();
 		}
 	}
 
@@ -113,7 +132,7 @@ public class MetricUploadService implements IService {
 	 * @return
 	 */
 	public JSONArray getUploadMetric() {
-		
+
 		JSONArray packageObject = new JSONArray();
 		byte[] metricContentArray = null;
 		synchronized (this._uploadMetricQueue) {
@@ -139,12 +158,13 @@ public class MetricUploadService implements IService {
 		JSONArray packageObject = new JSONArray();
 		long currentPackageSize = 0;
 		synchronized (this._uploadMetricQueue) {
-			for (int i = 0; i < this._uploadMetricQueue.size(); i++) {
-				currentPackageSize = currentPackageSize + (this._uploadMetricQueue.get(i).length * 8);
+			long poolSiz = this._uploadMetricQueue.size();
+			for (int i = 0; i < poolSiz && this._uploadMetricQueue.isEmpty() == false; i++) {
+				currentPackageSize = currentPackageSize + (this._uploadMetricQueue.get(0).length * 8);
+				packageObject.put(new String(this._uploadMetricQueue.remove(0)));
 				if (currentPackageSize > this._maxLimitPackageSize) {
 					break;
 				}
-				packageObject.put(new String(this._uploadMetricQueue.remove(i)));
 			}
 		}
 		if (packageObject.length() == 0) {

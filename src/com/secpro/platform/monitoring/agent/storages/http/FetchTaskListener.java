@@ -1,11 +1,14 @@
 package com.secpro.platform.monitoring.agent.storages.http;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.secpro.platform.api.client.IClientResponseListener;
 import com.secpro.platform.core.exception.PlatformException;
+import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
+import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 
 /**
@@ -136,11 +139,21 @@ public class FetchTaskListener implements IClientResponseListener {
 		}
 	}
 
-	private void addLocalTaskCache(JSONObject taskObj) {
-
-	}
-
+	/**
+	 * get local task from cache
+	 * @return
+	 */
 	public String getTaskFromLocalCache() {
-		return null;
+		MonitoringTaskCacheService monitoringTaskCacheService = ServiceHelper.findService(MonitoringTaskCacheService.class);
+		if (monitoringTaskCacheService == null) {
+			return "";
+		}
+		JSONObject taskObj = monitoringTaskCacheService.getCacheTaskInReferent();
+		if (taskObj == null) {
+			return "";
+		}
+		JSONArray taskArray = new JSONArray();
+		taskArray.put(taskObj);
+		return taskArray.toString();
 	}
 }

@@ -7,7 +7,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.log.utils.PlatformLogger;
+import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
@@ -62,6 +64,7 @@ public class TaskProcessingAction {
 						continue;
 					}
 					try {
+						//addLocalTaskCache(taskObject);
 						processFoundQueueMessage(taskObject, _workflows.remove(0));
 					} catch (Exception e) {
 						theLogger.exception(e);
@@ -155,5 +158,16 @@ public class TaskProcessingAction {
 			return false;
 		}
 		return true;
+	}
+	/**
+	 * add task into local
+	 * @param taskObj
+	 */
+	private void addLocalTaskCache(JSONObject taskObj) {
+		MonitoringTaskCacheService monitoringTaskCacheService = ServiceHelper.findService(MonitoringTaskCacheService.class);
+		if (monitoringTaskCacheService == null) {
+			return;
+		}
+		monitoringTaskCacheService.addTaskIntoCache(taskObj);
 	}
 }

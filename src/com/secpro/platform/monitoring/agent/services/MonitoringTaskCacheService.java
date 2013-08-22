@@ -138,7 +138,7 @@ public class MonitoringTaskCacheService implements IService {
 		for (int i = 0; i < localTaskContentList.size(); i++) {
 			synchronized (_taskCacheQueue) {
 				try {
-					_taskCacheQueue.add(new JSONObject(localTaskContentList.get(i)));
+					_taskCacheQueue.add(new JSONObject(monitoringEncryptService.decode(localTaskContentList.get(i))));
 				} catch (JSONException e) {
 					theLogger.exception(e);
 				}
@@ -155,7 +155,7 @@ public class MonitoringTaskCacheService implements IService {
 		if (dir == null || dir.exists() == false || dir.isDirectory() == false) {
 			return null;
 		}
-		String[] sonFileNames = dir.list(_taskJSONFileFilter);
+		File[] sonFileNames = dir.listFiles(_taskJSONFileFilter);
 		ArrayList<String> fileNameList = new ArrayList<String>();
 		// Create a file reader
 		FileReader fileReader = null;
