@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.secpro.platform.core.services.ServiceHelper;
@@ -103,7 +102,7 @@ public class SyslogStore {
 							System.out.println(syslogs.peek().toString());
 							JSONObject syslog = syslogs.peek();
 							//test
-							testUpload(syslog);
+							//testUpload(syslog);
 							// *******格式化********
 							String ip = syslog.getString("hostIP");
 							String msg = syslog.getString("msg");
@@ -162,7 +161,7 @@ public class SyslogStore {
 					synchronized (syslogs) {
 						JSONObject syslog = syslogs.peek();
 						//test
-						testUpload(syslog);
+						//testUpload(syslog);
 						// *******格式化********
 						String ip = syslog.getString("hostIP");
 						String msg = syslog.getString("msg");
@@ -223,14 +222,14 @@ public class SyslogStore {
 			syslogs.add(syslog);
 		}
 	}
-	
+	/*
 	private void testUpload(JSONObject syslog) {
 		// put it into upload pool
 		if (_metricUploadService == null) {
 			_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
 		}
 		_metricUploadService.addUploadMetric(syslog);
-	}
+	}*/
 	/*
 	 * private String getLastFileName(String fullfileName, int index) { flag =
 	 * false; String SyslogfileName = fullfileName; String lastFileName = ""; if
