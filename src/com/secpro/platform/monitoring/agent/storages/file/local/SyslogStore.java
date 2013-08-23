@@ -71,6 +71,9 @@ public class SyslogStore {
 		if (_metricStandardService == null) {
 			_metricStandardService = ServiceHelper.findService(MetricStandardService.class);
 		}
+		if(syslogs.size()==0){
+			return ;
+		}
 		try {
 
 			// 判断文件流日否为空，如为空时创建文件流
