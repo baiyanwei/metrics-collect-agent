@@ -171,6 +171,9 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	public void uploadRawData(Object rawDataObj) throws PlatformException {
 		try {
 			System.out.println("uploadRawData>>>" + rawDataObj);
+			if (_monitoringService == null) {
+				_monitoringService = ServiceHelper.findService(MonitoringService.class);
+			}
 			//
 			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSamplePath, HttpMethod.PUT, rawDataObj.toString());
 			//
