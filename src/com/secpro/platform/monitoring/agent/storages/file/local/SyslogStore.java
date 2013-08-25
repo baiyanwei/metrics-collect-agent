@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
@@ -28,7 +30,7 @@ public class SyslogStore {
 	private MetricStandardService _metricStandardService = null;
 	private SimpleDateFormat timedf1 = new SimpleDateFormat("yyyyMMddHH");
 	private PrintStream out;
-	private Queue<JSONObject> syslogs = new LinkedList<JSONObject>();
+	private List<JSONObject> syslogs = new ArrayList<JSONObject>();
 	private int index = 1;
 	private String lastDate = "";
 	// private boolean flag;
@@ -71,6 +73,13 @@ public class SyslogStore {
 		if (_metricStandardService == null) {
 			_metricStandardService = ServiceHelper.findService(MetricStandardService.class);
 		}
+		if(syslogs.size()==0){
+			return ;
+		}
+		List<JSONObject>  temp=new ArrayList<JSONObject>();
+		synchronized (syslogs) {
+			temp.addAll(syslogs);
+		}	
 		try {
 
 			// 判断文件流日否为空，如为空时创建文件流
@@ -95,14 +104,9 @@ public class SyslogStore {
 				// 当文件对象不为空，文件大小小于限制大小时
 
 				if (f != null && f.length() <= syslogMaxB) {
-
-					for (int i = 0; i < syslogs.size(); i++) {
-						synchronized (syslogs) {
+					for (int i = 0; i < temp.size(); i++) {
 							// 存储日志
-							System.out.println(syslogs.peek().toString());
-							JSONObject syslog = syslogs.peek();
-							//test
-							//testUpload(syslog);
+							JSONObject syslog = temp.get(i);
 							// *******格式化********
 							String ip = syslog.getString("hostIP");
 							String msg = syslog.getString("msg");
@@ -127,13 +131,13 @@ public class SyslogStore {
 								// ---------------
 							}
 							// 存储文件
-							out.println(syslogs.poll().toString());
-						}
+							out.println(temp.get(i));
+					}
+					synchronized (syslogs) {
+						syslogs.removeAll(temp);
 					}
 					out.flush();
 				} else if (f != null && f.length() > syslogMaxB) {
-					System.out.println(f);
-					System.out.println(f.length());
 					index++;
 					out.close();
 					String sylogFileName = getLogName("syslog");
@@ -157,11 +161,8 @@ public class SyslogStore {
 				}
 				out = new PrintStream(new FileOutputStream(f, true));
 
-				for (int i = 0; i < syslogs.size(); i++) {
-					synchronized (syslogs) {
-						JSONObject syslog = syslogs.peek();
-						//test
-						//testUpload(syslog);
+				for (int i = 0; i < temp.size(); i++) {
+						JSONObject syslog = temp.get(i);
 						// *******格式化********
 						String ip = syslog.getString("hostIP");
 						String msg = syslog.getString("msg");
@@ -185,10 +186,12 @@ public class SyslogStore {
 							_metricUploadService.addUploadMetric(syslogFormt);
 							// ---------------
 						}
-						out.println(syslogs.poll());
-					}
+						out.println(temp.get(i));
+				//	}
 				}
-
+				synchronized (syslogs) {
+					syslogs.removeAll(temp);
+				}
 				out.flush();
 			}
 			out.flush();
@@ -222,22 +225,4 @@ public class SyslogStore {
 			syslogs.add(syslog);
 		}
 	}
-	/*
-	private void testUpload(JSONObject syslog) {
-		// put it into upload pool
-		if (_metricUploadService == null) {
-			_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
-		}
-		_metricUploadService.addUploadMetric(syslog);
-	}*/
-	/*
-	 * private String getLastFileName(String fullfileName, int index) { flag =
-	 * false; String SyslogfileName = fullfileName; String lastFileName = ""; if
-	 * (index < 10) { SyslogfileName = fullfileName + "00" + index; } else if
-	 * (index >= 10 && index < 100) { SyslogfileName = fullfileName + "0" +
-	 * index; } else { SyslogfileName = fullfileName + index; } index++;
-	 * lastFileName = SyslogfileName; File f = new File(SyslogfileName); if
-	 * (f.exists()) { lastFileName = getLastFileName(fullfileName, index); }
-	 * return lastFileName; }
-	 */
 }
