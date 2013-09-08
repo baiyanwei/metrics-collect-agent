@@ -23,11 +23,25 @@ import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
  */
 public class SSHOperation extends MonitorOperation {
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(SSHOperation.class);
+	private Connection _sshConnection = null;
 
 	@Override
 	public void doIt(MonitoringTask task) throws PlatformException {
-		// set your collecting result into message.
-		System.out.println("SSHOperation>>do task:" + task.getTaskDescription());
+
+		// make sure the connection is closed and release.
+		long currentTimePoint = System.currentTimeMillis();
+		if (_sshConnection != null) {
+			try {
+				closeSSHConnection(_sshConnection);
+			} catch (Exception e) {
+			}
+			_sshConnection = null;
+		}
+		if (task == null) {
+			throw new PlatformException("invaild MonitoringTask in SSH operation.");
+		}
+		theLogger.debug("doTask", task.getTaskObj().toString());
+		//
 		HashMap<String, String> metaMap = task.getTaskMetaData();
 		// get Meta Data
 		String username = metaMap.get("username");
@@ -54,11 +68,16 @@ public class SSHOperation extends MonitorOperation {
 		}
 		//
 
-		String metricContent = null;
-		Connection sshConnection = null;
 		try {
-			sshConnection = createSSHConnection(hostIp, username, password, port);
-			metricContent = executeShellCommand(sshConnection, shellCommand);
+			_sshConnection = createSSHConnection(hostIp, username, password, port);
+			String metricContent = executeShellCommand(_sshConnection, shellCommand);
+			// "ssh": '{' "mid": "{0}", "t": "{1}", "ip": "{2}",
+			// "s":"{3}","c":"{4}"'}'
+			// package metric content.
+			HashMap<String, String> messageInputAndRequestHeaders = this._monitoringWorkflow.getMessageInputAndRequestHeaders(this._operationID, task.getMonitorID(),
+					task.getTimestamp(), task.getPropertyString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME), shellCommand, metricContent);
+			this._monitoringWorkflow.createResultsMessage(this._operationID, messageInputAndRequestHeaders);
+			this.fireCompletedSuccessfully();
 		} catch (Exception e) {
 			theLogger.exception(e);
 			this._operationError._exception = new PlatformException(e.getMessage(), e);
@@ -66,26 +85,29 @@ public class SSHOperation extends MonitorOperation {
 			return;
 
 		} finally {
-			if (sshConnection != null) {
+			if (_sshConnection != null) {
 				try {
-					closeSSHConnection(sshConnection);
+					closeSSHConnection(_sshConnection);
 				} catch (Exception e) {
 				}
+				_sshConnection = null;
 			}
 		}
-
-		// "ssh": '{' "mid": "{0}", "t": "{1}", "ip": "{2}",
-		// "s":"{3}","c":"{4}"'}'
-		// package metric content.
-		HashMap<String, String> messageInputAndRequestHeaders = this._monitoringWorkflow.getMessageInputAndRequestHeaders(this._operationID, task.getMonitorID(),
-				task.getTimestamp(), task.getPropertyString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME), shellCommand, metricContent);
-		this._monitoringWorkflow.createResultsMessage(this._operationID, messageInputAndRequestHeaders);
-		this.fireCompletedSuccessfully();
+		theLogger.debug("finishOperation", task.getTaskObj().toString(), String.valueOf(System.currentTimeMillis() - currentTimePoint));
+		
 	}
 
 	@Override
 	public void stopIt(MonitoringTask task) throws PlatformException {
-		this._operationError._message = "What is happen here?";
+		//
+		if (_sshConnection != null) {
+			try {
+				closeSSHConnection(_sshConnection);
+			} catch (Exception e) {
+			}
+		}
+		//
+		this._operationError._message = "stop the operation on stopIt";
 		this.fireError(this._operationError);
 	}
 
@@ -156,8 +178,7 @@ public class SSHOperation extends MonitorOperation {
 			System.out.println("ExitCode: " + sshSession.getExitStatus());
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			theLogger.exception(e);
 		} finally {
 			if (bufferedReader != null) {
 				try {
@@ -181,7 +202,7 @@ public class SSHOperation extends MonitorOperation {
 	 * @param sess
 	 *            SSH session
 	 */
-	private void closeSSHConnection(Connection conn) {
+	private synchronized void closeSSHConnection(Connection conn) {
 		if (conn != null) {
 			conn.close();
 		}
