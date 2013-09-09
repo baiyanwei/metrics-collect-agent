@@ -14,6 +14,7 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Import-Package: ch.ethz.ssh2,
  it.sauronsoftware.base64,
+ org.apache.commons.net.telnet,
  org.json,
  org.snmp4j,
  org.snmp4j.asn1,

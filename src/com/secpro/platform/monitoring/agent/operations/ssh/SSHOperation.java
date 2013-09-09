@@ -69,11 +69,19 @@ public class SSHOperation extends MonitorOperation {
 		//
 
 		try {
+			String shellCommands[] = shellCommand.split("\\^");
 			_sshConnection = createSSHConnection(hostIp, username, password, port);
-			String metricContent = executeShellCommand(_sshConnection, shellCommand);
+			StringBuilder results=new StringBuilder();
+			for(int i=0;i<shellCommands.length;i++){
+				String res=executeShellCommand(_sshConnection, shellCommands[i]);
+				if(res!=null&&(!res.equals(""))){
+					results.append(res);
+				}
+			}
 			// "ssh": '{' "mid": "{0}", "t": "{1}", "ip": "{2}",
 			// "s":"{3}","c":"{4}"'}'
 			// package metric content.
+			String metricContent =results.toString();
 			HashMap<String, String> messageInputAndRequestHeaders = this._monitoringWorkflow.getMessageInputAndRequestHeaders(this._operationID, task.getMonitorID(),
 					task.getTimestamp(), task.getPropertyString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME), shellCommand, metricContent);
 			this._monitoringWorkflow.createResultsMessage(this._operationID, messageInputAndRequestHeaders);
