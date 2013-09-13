@@ -61,7 +61,14 @@ public class TelnetOperation extends MonitorOperation {
 			StringBuffer sb = new StringBuffer();
 			char ch = (char) _telnetIn.read();
 			while (true) {
-				sb.append(ch);
+				if(ch=='\r'){
+					
+				}
+				else if(ch=='\n'){
+					sb.append('^');
+				}else{
+					sb.append(ch);
+				}
 				if (ch == lastChar) {
 					if (sb.toString().endsWith(pattern)) {
 						return sb.toString();
@@ -184,6 +191,7 @@ public class TelnetOperation extends MonitorOperation {
 			for(int i=0;i<shellCommands.length;i++){
 				String res=this.sendCommand(shellCommands[i], openCommand, execPrompt);
 				if(res!=null&&(!res.equals(""))){
+					if(!res.equals(shellCommands[i]))
 					results.append(res);
 				}
 			}
