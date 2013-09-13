@@ -29,25 +29,25 @@ public class SNMPOperation extends MonitorOperation {
 			//
 			String version = metaMap.get("snmp_version");
 			if (Assert.isEmptyString(version) == true) {
-				throw new PlatformException("invaild snmp_version in SNMP operation.");
+				throw new PlatformException("invalid snmp_version in SNMP operation.");
 			}
 			String hostIp = metaMap.get("host_ip");
 			if (Assert.isEmptyString(hostIp) == true) {
-				throw new PlatformException("invaild host_ip in SNMP operation.");
+				throw new PlatformException("invalid host_ip in SNMP operation.");
 			}
 			String protStr = metaMap.get("port");
 			if (Assert.isEmptyString(protStr) == true) {
-				throw new PlatformException("invaild port in SNMP operation.");
+				throw new PlatformException("invalid port in SNMP operation.");
 			}
 			int port = Integer.parseInt(protStr);
 			//
 			String community = metaMap.get("community");
 			if (Assert.isEmptyString(protStr) == true) {
-				throw new PlatformException("invaild community in SNMP operation.");
+				throw new PlatformException("invalid community in SNMP operation.");
 			}
 			String mibs = metaMap.get("mibs");
 			if (Assert.isEmptyString(protStr) == true) {
-				throw new PlatformException("invaild mibs in SNMP operation.");
+				throw new PlatformException("invalid mibs in SNMP operation.");
 			}
 			String[] mibArray = mibs.split(",");
 			//

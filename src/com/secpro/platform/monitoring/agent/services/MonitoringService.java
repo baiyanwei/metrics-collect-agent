@@ -41,8 +41,8 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	@XmlElement(name = "messageTimeout", type = Long.class, defaultValue = "120000")
 	public Long _messageTimeout = new Long(120000);
 
-	@XmlElement(name = "operationCapabilities", defaultValue = "snmp,ssh")
-	public String _operationCapabilities = "snmp,ssh";
+	@XmlElement(name = "operationCapabilities", defaultValue = "snmp,ssh,telnet")
+	public String _operationCapabilities = "snmp,ssh,telnet";
 
 	// Time interval when fetch task from the TSS.
 	@XmlElement(name = "fetchTSSTaskInterval", type = Long.class, defaultValue = "2000")

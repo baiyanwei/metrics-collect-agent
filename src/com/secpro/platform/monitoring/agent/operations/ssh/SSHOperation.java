@@ -38,7 +38,7 @@ public class SSHOperation extends MonitorOperation {
 			_sshConnection = null;
 		}
 		if (task == null) {
-			throw new PlatformException("invaild MonitoringTask in SSH operation.");
+			throw new PlatformException("invalid MonitoringTask in SSH operation.");
 		}
 		theLogger.debug("doTask", task.getTaskObj().toString());
 		//
@@ -46,25 +46,25 @@ public class SSHOperation extends MonitorOperation {
 		// get Meta Data
 		String username = metaMap.get("username");
 		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invaild username in SSH operation.");
+			throw new PlatformException("invalid username in SSH operation.");
 		}
 		String password = metaMap.get("password");
 		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invaild password in SSH operation.");
+			throw new PlatformException("invalid password in SSH operation.");
 		}
 		String hostIp = metaMap.get("host_ip");
 		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invaild host_ip in SSH operation.");
+			throw new PlatformException("invalid host_ip in SSH operation.");
 		}
 		String protStr = metaMap.get("port");
 		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invaild port in SSH operation.");
+			throw new PlatformException("invalid port in SSH operation.");
 		}
 		int port = Integer.parseInt(protStr);
 		//
 		String shellCommand = metaMap.get("shell_command");
 		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invaild shell_command in SSH operation.");
+			throw new PlatformException("invalid shell_command in SSH operation.");
 		}
 		//
 

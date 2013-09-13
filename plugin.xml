@@ -10,5 +10,7 @@
    		</operation>
    		<operation id="ssh" class="com.secpro.platform.monitoring.agent.operations.ssh.SSHOperation" reSetID="true">
    		</operation>
+   		<operation id="telnet" class="com.secpro.platform.monitoring.agent.operations.telnet.TelnetOperation" reSetID="true">
+   		</operation>
 	</extension>
 </plugin>

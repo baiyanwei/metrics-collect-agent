@@ -108,7 +108,7 @@ public class TelnetOperation extends MonitorOperation {
 	@Override
 	public void start() throws PlatformException {
 		// TODO Auto-generated method stub
-
+		System.out.println(">>>>>>>>>>>");
 	}
 
 	@Override
@@ -129,25 +129,25 @@ public class TelnetOperation extends MonitorOperation {
 			_telnetClient = null;
 		}
 		if (task == null) {
-			throw new PlatformException("invaild MonitoringTask in TELNET operation.");
+			throw new PlatformException("invalid MonitoringTask in TELNET operation.");
 		}
 		theLogger.debug("doTask", task.getTaskObj().toString());
 		HashMap<String, String> metaMap = task.getTaskMetaData();
 		String username=metaMap.get("username");
 		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invaild username in TELNET operation.");
+			throw new PlatformException("invalid username in TELNET operation.");
 		}
 		String password=metaMap.get("password");
 		if (Assert.isEmptyString(password) == true) {
-			throw new PlatformException("invaild password in TELNET operation.");
+			throw new PlatformException("invalid password in TELNET operation.");
 		}
 		String ip=metaMap.get("ip");
 		if (Assert.isEmptyString(ip) == true) {
-			throw new PlatformException("invaild ip in TELNET operation.");
+			throw new PlatformException("invalid ip in TELNET operation.");
 		}
 		String port=metaMap.get("port");
 		if (Assert.isEmptyString(port) == true) {
-			throw new PlatformException("invaild port in TELNET operation.");
+			throw new PlatformException("invalid port in TELNET operation.");
 		}
 		Pattern pattern = Pattern.compile("[0-9]*"); 
 	    if(!pattern.matcher(port).matches()) {
@@ -155,27 +155,27 @@ public class TelnetOperation extends MonitorOperation {
 	    }
 	    String shellCommand=metaMap.get("shellCommand");
 		if (Assert.isEmptyString(shellCommand) == true) {
-			throw new PlatformException("invaild shellCommand in TELNET operation.");
+			throw new PlatformException("invalid shellCommand in TELNET operation.");
 		}
 		String openCommand=metaMap.get("openCommand");
 		if (Assert.isEmptyString(openCommand) == true) {
-			throw new PlatformException("invaild openCommand in TELNET operation.");
+			throw new PlatformException("invalid openCommand in TELNET operation.");
 		}
 		String prompt=metaMap.get("prompt");
 		if (Assert.isEmptyString(prompt) == true) {
-			throw new PlatformException("invaild prompt in TELNET operation.");
+			throw new PlatformException("invalid prompt in TELNET operation.");
 		}
 		String execPrompt=metaMap.get("execPrompt");
 		if (Assert.isEmptyString(execPrompt) == true) {
-			throw new PlatformException("invaild execPrompt in TELNET operation.");
+			throw new PlatformException("invalid execPrompt in TELNET operation.");
 		}
 		String userPrompt=metaMap.get("userPrompt");
 		if (Assert.isEmptyString(userPrompt) == true) {
-			throw new PlatformException("invaild userPrompt in TELNET operation.");
+			throw new PlatformException("invalid userPrompt in TELNET operation.");
 		}
 		String passwdPrompt=metaMap.get("passwdPrompt");
 		if (Assert.isEmptyString(passwdPrompt) == true) {
-			throw new PlatformException("invaild passwdPrompt in TELNET operation.");
+			throw new PlatformException("invalid passwdPrompt in TELNET operation.");
 		}
 		try {
 			String shellCommands[] = shellCommand.split("\\^");
