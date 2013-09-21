@@ -160,22 +160,24 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @param ip
 	 * @return
 	 */
-	public String findCheckNum(String ip){
+	public int findCheckNum(String ip){
 		JSONObject standardRuleObj = findRegexs(ip);
 		if (standardRuleObj == null) {
-			return null;
+			return -1;
 		}
 		if (standardRuleObj.has("checkNum") == false) {
-			return null;
+			return -1;
 		}
 		
 		try {
-			return standardRuleObj.getString("checkNum");
+			int checkNum=standardRuleObj.getInt("checkNum");
+			return checkNum>=0?checkNum:-1;
+			
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			theLogger.exception(e);
 		}
-		return null;
+		return -1;
 	}
 	/**
 	 * 提供syslog标准化后上传条件，checkAction(可能取值drop,upload)：根据参数值判断是否上传原始日志
