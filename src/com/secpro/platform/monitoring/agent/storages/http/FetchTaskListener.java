@@ -1,20 +1,22 @@
 package com.secpro.platform.monitoring.agent.storages.http;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
+import org.json.JSONException;
 
 import com.secpro.platform.api.client.IClientResponseListener;
 import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.services.ServiceHelper;
+import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
 import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
-import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 
 /**
  * @author baiyanwei Jul 13, 2013
  * 
- *         Storage listener instance.
+ *         Storage listener instance. We fetch the task from TSS,if network
+ *         doesn't work,then try for 4 times, if network is disconnection after
+ *         4 times, get the task from local cache service.
  * 
  */
 public class FetchTaskListener implements IClientResponseListener {
@@ -22,9 +24,16 @@ public class FetchTaskListener implements IClientResponseListener {
 	// Logging Object
 	//
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(FetchTaskListener.class);
+
 	public TaskProcessingAction _taskProcessingAction = null;
 	// 0 false 1 true
-	private byte _isHasResponse = 0;
+	// private byte _isHasResponse = 0;
+
+	private String _listenerID = "FetchTaskListener";
+
+	private String _listenerName = "FetchTaskListener";
+
+	private String _listenerDescription = null;
 
 	public FetchTaskListener(TaskProcessingAction action) {
 		this._taskProcessingAction = action;
@@ -44,48 +53,41 @@ public class FetchTaskListener implements IClientResponseListener {
 
 	@Override
 	public void setID(String id) {
-		// TODO Auto-generated method stub
-
+		this._listenerID = id;
 	}
 
 	@Override
 	public String getID() {
-		// TODO Auto-generated method stub
-		return null;
+		return this._listenerID + this.hashCode();
 	}
 
 	@Override
 	public void setName(String name) {
-		// TODO Auto-generated method stub
-
+		this._listenerName = name;
 	}
 
 	@Override
 	public String getName() {
-		// TODO Auto-generated method stub
-		return null;
+		return this._listenerName;
 	}
 
 	@Override
 	public void setDescription(String description) {
-		// TODO Auto-generated method stub
-
+		this._listenerDescription = description;
 	}
 
 	@Override
 	public String getDescription() {
-		// TODO Auto-generated method stub
-		return null;
+		return this._listenerDescription;
 	}
 
 	@Override
 	public void fireSucceed(Object messageObj) throws PlatformException {
-		// TODO Auto-generated method stub
-
-		if (_isHasResponse == 0) {
-			_isHasResponse = 1;
-			StorageAdapterService.updateResponseCount();
-		}
+		// if (_isHasResponse == 0) {
+		// _isHasResponse = 1;
+		// StorageAdapterService.updateResponseCount();
+		// }
+		// clear the error counter about disconnection.
 		try {
 			if (messageObj != null) {
 				final String contents = messageObj.toString();
@@ -93,7 +95,10 @@ public class FetchTaskListener implements IClientResponseListener {
 				if (contents != null && contents.trim().length() > 0) {
 					new Thread("DPUStorageListener.taskProcessingAction.processTasks") {
 						public void run() {
+							// execute job
 							processTasks(contents);
+							// put job into local task cache.
+							putJobIntoLocalCache(contents);
 						}
 					}.start();
 					return;
@@ -114,46 +119,44 @@ public class FetchTaskListener implements IClientResponseListener {
 
 	@Override
 	public void fireError(Object messageObj) throws PlatformException {
-		// TODO Auto-generated method stub
-
-		if (_isHasResponse == 0) {
-			_isHasResponse = 1;
-			StorageAdapterService.updateResponseCount();
+		// if (_isHasResponse == 0) {
+		// _isHasResponse = 1;
+		// StorageAdapterService.updateResponseCount();
+		// }
+		if (messageObj != null) {
+			theLogger.exception(new Exception(messageObj.toString()));
 		}
-		if (_taskProcessingAction._isFetchCacheTaskOnError == true) {
-			new Thread("DPUStorageListener.taskProcessingAction.processTasks") {
-				public void run() {
-					processTasks(getTaskFromLocalCache());
-				}
-			}.start();
-			return;
-		} else {
-			new Thread("DPUStorageListener.taskProcessingAction.recycle") {
-				public void run() {
-					recycleWorkflows();
-				}
-			}.start();
-			if (messageObj != null) {
-				theLogger.exception(new Exception(messageObj.toString()));
+		new Thread("DPUStorageListener.taskProcessingAction.recycle") {
+			public void run() {
+				recycleWorkflows();
 			}
-		}
+		}.start();
+
 	}
 
 	/**
-	 * get local task from cache
-	 * @return
+	 * put job into local cache.
+	 * 
+	 * @param jobString
 	 */
-	public String getTaskFromLocalCache() {
-		MonitoringTaskCacheService monitoringTaskCacheService = ServiceHelper.findService(MonitoringTaskCacheService.class);
-		if (monitoringTaskCacheService == null) {
-			return "";
+	private void putJobIntoLocalCache(String jobsString) {
+		if (Assert.isEmptyString(jobsString) == true) {
+			return;
 		}
-		JSONObject taskObj = monitoringTaskCacheService.getCacheTaskInReferent();
-		if (taskObj == null) {
-			return "";
+		MonitoringTaskCacheService taskCache = ServiceHelper.findService(MonitoringTaskCacheService.class);
+		try {
+			// JSONTokener parser = new JSONTokener(content);
+
+			JSONArray taskJsons = new JSONArray(jobsString);
+			if (taskJsons == null || taskJsons.length() == 0) {
+				return;
+			}
+			for (int i = 0; i < taskJsons.length(); i++) {
+				taskCache.addTaskIntoCache(taskJsons.getJSONObject(i));
+			}
+			theLogger.debug("putJobIntoLocalCache", jobsString);
+		} catch (JSONException e) {
+			theLogger.exception(e);
 		}
-		JSONArray taskArray = new JSONArray();
-		taskArray.put(taskObj);
-		return taskArray.toString();
 	}
 }

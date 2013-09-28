@@ -7,23 +7,21 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.log.utils.PlatformLogger;
-import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
-
 /**
+ * @author baiyanwei
+ * Sep 26, 2013
+ *
+ * 
  * This class will process the messages returned be the DPU
- * 
- * @author Martin
- * 
  */
 public class TaskProcessingAction {
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(TaskProcessingAction.class);
 	private List<MonitoringWorkflow> _workflows = null;
-	public boolean _isFetchCacheTaskOnError=false;
+
 	public TaskProcessingAction(List<MonitoringWorkflow> workflows) {
 		_workflows = workflows;
 	}
@@ -35,17 +33,17 @@ public class TaskProcessingAction {
 	public void processTasks(String content) {
 
 		try {
-			theLogger.debug("processTask",content);
+			theLogger.debug("processTask", content);
 
 			if (_workflows == null || content == null || content.trim().length() <= 0) {
 				return;
 			}
 			JSONTokener parser = new JSONTokener(content);
-			
+
 			JSONArray taskJsons = new JSONArray(parser);
 
 			// No tasks were return from the
-			if (taskJsons == null || taskJsons.length() == 0){
+			if (taskJsons == null || taskJsons.length() == 0) {
 				theLogger.debug("invalidTaskcontent");
 				return;
 			}
@@ -64,7 +62,7 @@ public class TaskProcessingAction {
 						continue;
 					}
 					try {
-						//addLocalTaskCache(taskObject);
+						// addLocalTaskCache(taskObject);
 						processFoundQueueMessage(taskObject, _workflows.remove(0));
 					} catch (Exception e) {
 						theLogger.exception(e);
@@ -158,16 +156,5 @@ public class TaskProcessingAction {
 			return false;
 		}
 		return true;
-	}
-	/**
-	 * add task into local
-	 * @param taskObj
-	 */
-	private void addLocalTaskCache(JSONObject taskObj) {
-		MonitoringTaskCacheService monitoringTaskCacheService = ServiceHelper.findService(MonitoringTaskCacheService.class);
-		if (monitoringTaskCacheService == null) {
-			return;
-		}
-		monitoringTaskCacheService.addTaskIntoCache(taskObj);
 	}
 }

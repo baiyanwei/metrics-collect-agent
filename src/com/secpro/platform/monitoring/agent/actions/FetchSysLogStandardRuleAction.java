@@ -29,7 +29,6 @@ import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
 import com.secpro.platform.monitoring.agent.services.MetricStandardService;
 import com.secpro.platform.monitoring.agent.services.MonitoringNodeService;
-import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
 import com.secpro.platform.monitoring.agent.storages.http.FetchStandardRuleListener;
 
 /**
@@ -84,7 +83,7 @@ public class FetchSysLogStandardRuleAction extends Thread {
 			//
 			client.start();
 			//
-			StorageAdapterService.updateRquestCount();
+			//StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchStandardRule", e);
 		}
@@ -136,7 +135,7 @@ public class FetchSysLogStandardRuleAction extends Thread {
 		return request;
 	}
 
-	public void analyzeStandardRuleOK(String content) {
+	public void analyzeStandardRuleOK(String content) throws Exception{
 		if (Assert.isEmptyString(content) == true) {
 			return;
 		}
@@ -167,6 +166,7 @@ public class FetchSysLogStandardRuleAction extends Thread {
 			theLogger.debug("reportFetchRuleResult", ruleJsons.length(), successfulCounter);
 		} catch (Exception e1) {
 			theLogger.exception("getMessageForReturn", e1);
+			throw e1;
 		}
 	}
 

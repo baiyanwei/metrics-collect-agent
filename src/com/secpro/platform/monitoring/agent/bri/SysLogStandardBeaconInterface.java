@@ -1,5 +1,7 @@
 package com.secpro.platform.monitoring.agent.bri;
 
+import com.secpro.platform.api.common.http.server.HttpServer;
+
 /**
  * @author baiyanwei
  * Jul 21, 2013
@@ -7,6 +9,6 @@ package com.secpro.platform.monitoring.agent.bri;
  *  SysLog listenter
  *
  */
-public class SysLogStandardBeaconInterface {
+public class SysLogStandardBeaconInterface extends HttpServer{
 
 }

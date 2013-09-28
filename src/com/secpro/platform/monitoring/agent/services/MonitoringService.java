@@ -66,8 +66,8 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	// cache the version number
 	@Metric(description = "The version number of MCA")
 	public String _version = Activator._version.toString();
-
-	public boolean _isFetchCacheTaskOnError = false;
+	@XmlElement(name = "isFetchCacheTaskOnError", type = Boolean.class, defaultValue = "true")
+	public Boolean _isFetchCacheTaskOnError = new Boolean(true);
 
 	// This is the list of workflows that the task queue will
 	// use to process tasks. the more of these, the more tasks

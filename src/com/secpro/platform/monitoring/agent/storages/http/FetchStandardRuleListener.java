@@ -65,7 +65,11 @@ public class FetchStandardRuleListener implements IClientResponseListener {
 				if (contents != null && contents.trim().length() > 0) {
 					new Thread("FetchStandardRuleListener.FetchSysLogStandardRuleAction.anaylzeStandardRule") {
 						public void run() {
-							_fetchSysLogStandardRuleAction.analyzeStandardRuleOK(contents);
+							try {
+								_fetchSysLogStandardRuleAction.analyzeStandardRuleOK(contents);
+							} catch (Exception e) {
+								theLogger.exception(e);
+							}
 						}
 					}.start();
 					return;
@@ -85,7 +89,11 @@ public class FetchStandardRuleListener implements IClientResponseListener {
 				if (contents != null && contents.trim().length() > 0) {
 					new Thread("DPUStorageListener.taskProcessingAction.recycle") {
 						public void run() {
-							_fetchSysLogStandardRuleAction.analyzeStandardRuleOK(contents);
+							try {
+								_fetchSysLogStandardRuleAction.analyzeStandardRuleOK(contents);
+							} catch (Exception e) {
+								theLogger.exception(e);
+							}
 						}
 					}.start();
 				}

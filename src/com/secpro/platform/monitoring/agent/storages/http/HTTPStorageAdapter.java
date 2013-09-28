@@ -28,6 +28,8 @@ import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import com.secpro.platform.api.client.ClientConfiguration;
 import com.secpro.platform.api.common.http.client.HttpClient;
@@ -40,8 +42,9 @@ import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
 import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
-import com.secpro.platform.monitoring.agent.services.StorageAdapterService;
+import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.storages.IDataStorage;
+import com.secpro.platform.monitoring.agent.utils.file.FileSystemStorageUtil;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
 /**
@@ -76,6 +79,8 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	final private static String FETCH_MESSAGE_BODY = "ok";
 
 	private MonitoringService _monitoringService = null;
+
+	private int _netwokDisconnectionErrorCounter = 0;
 
 	@Override
 	public void start() throws PlatformException {
@@ -168,9 +173,12 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	}
 
 	@Override
-	public void uploadRawData(Object rawDataObj) throws PlatformException {
+	public void uploadRawData(final Object rawDataObj) throws PlatformException {
+		if (rawDataObj == null) {
+			throw new PlatformException("invalid upload sample data");
+		}
 		try {
-			System.out.println("uploadRawData>>>" + rawDataObj);
+			theLogger.debug("readyForUpload", rawDataObj.toString());
 			if (_monitoringService == null) {
 				_monitoringService = ServiceHelper.findService(MonitoringService.class);
 			}
@@ -183,8 +191,13 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			config._endPointPort = this._hostPort.intValue();
 			config._synchronousConnection = false;
 			config._httpRequest = httpRequestV2;
-			config._responseListener = new PushDataSampleListener();
 			config._content = rawDataObj.toString();
+			//
+			PushDataSampleListener pushDataSampleListener = new PushDataSampleListener();
+			pushDataSampleListener.setSampleData(config._content);
+			//
+			config._responseListener = pushDataSampleListener;
+
 			//
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
 			appendRequestHeaderParameters(requestHeadParaMap, 0);
@@ -194,19 +207,47 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			//
 			client.start();
 			//
-			StorageAdapterService.updateRquestCount();
+			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
-			theLogger.exception(e);
+			theLogger.exception("uploadRawData",e);
+			if (e.getMessage().equals(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
+				//write the sample body into file when connect to server in exception.
+				new Thread("HTTPStorageAdapter.uploadRawData.storeSampleDateToFile") {
+					// when upload sample data is in disconnection. We should handle
+					// this case on later.
+					// We should put sample data into local system. and upload it
+					// when connection is ready.
+					public void run() {
+						try {
+							MonitoringTaskCacheService monitoringTaskCacheService = ServiceHelper.findService(MonitoringTaskCacheService.class);
+							// store the file content into local system.
+							String filePath = FileSystemStorageUtil.storeSampleDateToFile(monitoringTaskCacheService.getFileStorageNameForTask(), rawDataObj.toString());
+							if (filePath == null) {
+								return;
+							}
+							// add file and waiting for uploading.
+							monitoringTaskCacheService.addUploadSampleForDisconnection(filePath);
+						} catch (Exception e) {
+							theLogger.exception(e);
+						}
+
+					}
+				}.start();
+				return;
+			}
 		}
 	}
 
 	@Override
 	public void executeFetchMessage(List<MonitoringWorkflow> workflows) {
+		if (workflows == null || workflows.isEmpty()) {
+			return;
+		}
+		final TaskProcessingAction taskAction = new TaskProcessingAction(workflows);
 		try {
 			if (_monitoringService == null) {
 				_monitoringService = ServiceHelper.findService(MonitoringService.class);
 			}
-			TaskProcessingAction taskAction = new TaskProcessingAction(workflows);
 			// This is the parameters of the Fetch message
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
 			appendRequestHeaderParameters(requestHeadParaMap, workflows.size());
@@ -227,9 +268,25 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			//
 			client.start();
 			//
-			StorageAdapterService.updateRquestCount();
+			_netwokDisconnectionErrorCounter = 0;
+			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchMessage", e);
+			if (_monitoringService._isFetchCacheTaskOnError == true && e.getMessage().equals(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
+				_netwokDisconnectionErrorCounter++;
+				//adjust fetch action is OK or not, if not , then fetch a job from local cache.
+				if (_netwokDisconnectionErrorCounter >= 3) {
+					final String cacheTaskObj = getTaskFromLocalCache();
+					if (cacheTaskObj != null) {
+						new Thread("HTTPStorageAdapter.executeFetchMessage.ProcessCacheTasks") {
+							public void run() {
+								taskAction.processTasks(cacheTaskObj);
+							}
+						}.start();
+						return;
+					}
+				}
+			}
 			for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
 				try {
 					iter.next().recycleForReady();
@@ -237,6 +294,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 					continue;
 				}
 			}
+
 		}
 	}
 
@@ -352,5 +410,22 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringService.getNodeLocation());
 		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflowCount));
 		requestHeadParaMap.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
+	}
+
+	/**
+	 * get local task from cache
+	 * 
+	 * @return
+	 */
+	private String getTaskFromLocalCache() {
+		MonitoringTaskCacheService monitoringTaskCacheService = ServiceHelper.findService(MonitoringTaskCacheService.class);
+		JSONObject taskObj = monitoringTaskCacheService.getCacheTaskInReferent();
+		if (taskObj == null) {
+			return null;
+		}
+		JSONArray taskArray = new JSONArray();
+		taskArray.put(taskObj);
+		theLogger.debug("runJobFromLocalCache", taskObj.toString());
+		return taskArray.toString();
 	}
 }

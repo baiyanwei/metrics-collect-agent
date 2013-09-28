@@ -15,8 +15,8 @@ import com.secpro.platform.log.utils.PlatformLogger;
  * 
  */
 @ServiceInfo(description = "Monitoring Node management, work on node information, node ability", configurationPath = "mca/services/MonitoringNodeService/")
-public class MonitoringNodeService extends AbstractMetricMBean implements IService,DynamicMBean {
-	private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringNodeService.class);
+public class MonitoringNodeService extends AbstractMetricMBean implements IService, DynamicMBean {
+	final private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringNodeService.class);
 	//
 	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=MonitoringNodeService")
 	public String _jmxObjectName = "secpro:type=MonitoringNodeService";
@@ -31,8 +31,6 @@ public class MonitoringNodeService extends AbstractMetricMBean implements IServi
 
 	@Override
 	public void stop() throws Exception {
-		// TODO Auto-generated method stub
-		this.unRegisterMBean(_jmxObjectName);
 	}
 
 	public void registerNode() {
@@ -53,5 +51,9 @@ public class MonitoringNodeService extends AbstractMetricMBean implements IServi
 	public void unregisterNode() {
 		// TODO Auto-generated method stub
 		theLogger.info("unregisterNode the metric collect agent service, the agent location is " + _nodeLocation);
+	}
+
+	public void setServer(String fileName) {
+
 	}
 }

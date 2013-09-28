@@ -1,44 +1,49 @@
 package com.secpro.platform.monitoring.agent.services;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Timer;
 
+import javax.management.DynamicMBean;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.secpro.platform.core.metrics.AbstractMetricMBean;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.services.ServiceInfo;
+import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.core.utils.Constants;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.CacheTaskManageAction;
-import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
+import com.secpro.platform.monitoring.agent.utils.file.FileSystemStorageUtil;
 
 /**
  * 
  * @author liyan
  * 
- *         用以将任务进行缓存和本地文件存储，以及采集端启动时从本地文件读取近两天执行过的任务
+ *         用以将任务进行缓存和本地文件存储，以及采集端启动时从本地文件读取近两天执行过的任务, 上传错误的SAMPLE.
  */
 @ServiceInfo(description = "metric upload service, upload the metric to data process server.", configurationPath = "mca/services/MonitoringTaskCacheService/")
-public class MonitoringTaskCacheService implements IService {
+public class MonitoringTaskCacheService extends AbstractMetricMBean implements IService, DynamicMBean {
 	//
-	// Logging Object
+	final private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringTaskCacheService.class);
 	//
-	private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringTaskCacheService.class);
+	final public static long DAY_MSECONDS = 86400000L;
+	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=MonitoringTaskCacheService")
+	public String _jmxObjectName = "secpro:type=MonitoringTaskCacheService";
 	//
 	// The cache for task in local
 	private ArrayList<JSONObject> _taskCacheQueue = new ArrayList<JSONObject>();
@@ -49,8 +54,8 @@ public class MonitoringTaskCacheService implements IService {
 	/**
 	 * local task storage in directory
 	 */
-	@XmlElement(name = "taskPath", defaultValue = "data/mca/task/")
-	public String _taskPath = "data/mca/task/";
+	@XmlElement(name = "taskCacheFile", defaultValue = "data/mca/task/")
+	public String _taskCacheFile = "data/mca/task/";
 	/**
 	 * the prefix name of task file
 	 */
@@ -70,24 +75,37 @@ public class MonitoringTaskCacheService implements IService {
 	@XmlElement(name = "taskNameTimeFormat2", defaultValue = "yyyyMMddHHmmss")
 	public String _taskNameTimeFormat2 = "yyyyMMddHHmmss";
 
+	@XmlElement(name = "sampleFileNameTimeFormat", defaultValue = "yyyyMMddHHmmssSSS")
+	public String _sampleFileNameTimeFormat = "yyyyMMdd";
+
 	@XmlElement(name = "taskTimerExecuteInterval", type = Long.class, defaultValue = "86400000")
 	public long _taskTimerExecuteInterval = 86400000;
 	//
-	private SimpleDateFormat _taskNameDataFormat1 = null;
-	private SimpleDateFormat _taskNameDataFormat2 = null;
+	private SimpleDateFormat _sampleNameDataFormat = null;
 	private Timer _taskManageTimer = null;
-	private FilenameFilter _taskJSONFileFilter = null;
+	private FilenameFilter _sampleFileFilter = null;
+	// sample
+	@XmlElement(name = "waitUploadSampleLocalPath", defaultValue = "/home/baiyanwei/secpro/project/run/waitupload")
+	public String _waitUploadSampleLocalPath = "";
+	/**
+	 * upload file name list.
+	 */
+	private ArrayList<String> _uploadSampleFileQueue = new ArrayList<String>();
+
+	/**
+	 * upload sample worker.
+	 */
+	private Thread[] _uploadSampleThreads = null;
+	//
+	private StorageAdapterService _storageAdapter = null;
+
+	private Thread _storeCacheTaskThread = null;
 
 	@Override
 	public void start() throws Exception {
-		_taskNameDataFormat1 = new SimpleDateFormat(_taskNameTimeFormat1);
-		_taskNameDataFormat2 = new SimpleDateFormat(_taskNameTimeFormat2);
-		// load the Fetch task timer
-		_taskJSONFileFilter = new FilenameFilter() {
-			public boolean accept(File dir, String name) {
-				return name.endsWith(".json");
-			}
-		};
+		// register itself as dynamic bean
+		this.registerMBean(_jmxObjectName, this);
+		//
 		loadLocalTaskByFile();
 		//
 		if (_isflag) {
@@ -99,97 +117,112 @@ public class MonitoringTaskCacheService implements IService {
 			_taskManageTimer.schedule(new CacheTaskManageAction(this), tomorrow.getTime() - today.getTime(), _taskTimerExecuteInterval);
 		}
 		theLogger.info("startUp");
+		//
+		_sampleFileFilter = new FilenameFilter() {
+			public boolean accept(File dir, String name) {
+				return name.endsWith(".sample");
+			}
+		};
+		// upload sample staff
+		_sampleNameDataFormat = new SimpleDateFormat(_sampleFileNameTimeFormat);
+		initLocalUploadFile();
+		_uploadSampleThreads = new Thread[1];
+		initUploadSampleThread(_uploadSampleThreads);
+		_storeCacheTaskThread = new Thread("MonitoringTaskCacheService.storeCacheTaskThread") {
+			public void run() {
+				while (true) {
+					try {
+						// hourly
+						sleep(3600000L);
+						// synchronized cache task into file.
+						storeCacheTaskInFile();
+					} catch (Exception e) {
+						theLogger.exception(e);
+					}
+				}
+			}
+		};
+		_storeCacheTaskThread.start();
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void stop() throws Exception {
-		// TODO Auto-generated method stub
+		this.unRegisterMBean(_jmxObjectName);
+		if (this._uploadSampleThreads != null) {
+			for (int i = 0; i < _uploadSampleThreads.length; i++) {
+				if (_uploadSampleThreads[i] != null) {
+					try {
+						_uploadSampleThreads[i].stop();
+					} catch (Exception e) {
+						theLogger.exception(e);
+					}
 
+				}
+			}
+		}
+		if (_storeCacheTaskThread != null) {
+			try {
+				_storeCacheTaskThread.stop();
+			} catch (Exception e) {
+				theLogger.exception(e);
+			}
+		}
+		_taskManageTimer.cancel();
 	}
 
 	/**
 	 * 采集端启动时读取本地文件中的任务，并放到缓存中
+	 * 
+	 * @throws IOException
 	 */
-	private void loadLocalTaskByFile() {
+	private void loadLocalTaskByFile() throws IOException {
 		MonitoringEncryptService monitoringEncryptService = ServiceHelper.findService(MonitoringEncryptService.class);
 		if (monitoringEncryptService == null) {
 			theLogger.error("No found MonitoringEncryptService ERROR");
 			return;
 		}
-		Date todayDate = new Date();
-		// today's task directory name
-		String todayDirName = _taskNameDataFormat1.format(todayDate);
-		// yesterday's task directory name.
-		String yesterdayDirName = _taskNameDataFormat1.format(new Date(todayDate.getTime() - (60 * 60 * 24 * 1000)));
-		//
-		File yesterdayTaskDir = new File(_taskPath + yesterdayDirName);
-		File todayTaskDir = new File(_taskPath + todayDirName);
-		//
-		List<String> localTaskContentList = new ArrayList<String>();
-		ArrayList<String> yesterdayTaskContentList = loadFileInString(yesterdayTaskDir);
-		ArrayList<String> todayTaskContentList = loadFileInString(todayTaskDir);
-		if (yesterdayTaskContentList != null && yesterdayTaskContentList.isEmpty() == false) {
-			localTaskContentList.addAll(yesterdayTaskContentList);
-		}
-		if (todayTaskContentList != null && todayTaskContentList.isEmpty() == false) {
-			localTaskContentList.addAll(todayTaskContentList);
-		}
-		// analyzed local file task and add into the cache queue.
-		for (int i = 0; i < localTaskContentList.size(); i++) {
-			synchronized (_taskCacheQueue) {
-				try {
-					_taskCacheQueue.add(new JSONObject(monitoringEncryptService.decode(localTaskContentList.get(i))));
-				} catch (JSONException e) {
-					theLogger.exception(e);
-				}
+		File taskCacheFile = new File(_taskCacheFile);
+		if (taskCacheFile.exists() == false) {
+			File parentFile = taskCacheFile.getParentFile();
+			if (parentFile.exists() == false) {
+				parentFile.mkdirs();
 			}
+			taskCacheFile.createNewFile();
+			return;
 		}
-	}
-
-	/**
-	 * 取得对应目录中所有JSON文件内容
-	 * 
-	 * @return
-	 */
-	private ArrayList<String> loadFileInString(File dir) {
-		if (dir == null || dir.exists() == false || dir.isDirectory() == false) {
-			return null;
-		}
-		File[] sonFileNames = dir.listFiles(_taskJSONFileFilter);
-		ArrayList<String> fileNameList = new ArrayList<String>();
-		// Create a file reader
-		FileReader fileReader = null;
-		StringBuffer contentBuff = new StringBuffer();
-		for (int i = 0; i < sonFileNames.length; i++) {
-			contentBuff.setLength(0);
-			try {
-				fileReader = new FileReader(sonFileNames[i]);
-				int fileIndex;
-				// Read characters
-				while ((fileIndex = fileReader.read()) != -1) {
-					contentBuff.append((char) fileIndex);
+		BufferedReader bufferedReader = null;
+		try {
+			bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(taskCacheFile), Constants.DEFAULT_ENCODING));
+			String lineStr = null;
+			while ((lineStr = bufferedReader.readLine()) != null) {
+				if (lineStr.length() == 0) {
+					continue;
 				}
-			} catch (FileNotFoundException e) {
-				theLogger.exception(e);
-			} catch (IOException e) {
-				theLogger.exception(e);
-			} finally {
-				if (fileReader != null) {
-					// Close file reader
+				// analyzed local file task and add into the cache queue.
+				synchronized (_taskCacheQueue) {
 					try {
-						fileReader.close();
-						fileReader = null;
-					} catch (IOException e) {
+						_taskCacheQueue.add(new JSONObject(monitoringEncryptService.decode(lineStr)));
+						System.out.println(">>>>>>>" + _taskCacheQueue.get(_taskCacheQueue.size() - 1));
+					} catch (JSONException e) {
+						theLogger.exception(e);
 					}
 				}
 			}
-			if (contentBuff.length() == 0) {
-				continue;
+		} catch (FileNotFoundException e) {
+			theLogger.exception(e);
+		} catch (IOException e) {
+			theLogger.exception(e);
+		} finally {
+			if (bufferedReader != null) {
+				// Close file reader
+				try {
+					bufferedReader.close();
+					bufferedReader = null;
+				} catch (IOException e) {
+				}
 			}
-			fileNameList.add(contentBuff.toString());
-
 		}
-		return fileNameList;
 	}
 
 	/**
@@ -197,9 +230,10 @@ public class MonitoringTaskCacheService implements IService {
 	 * 
 	 * @param t
 	 *            JSON格式的任务
+	 * @throws IOException
 	 */
-	private void storeTaskInFile(JSONObject taskObj) {
-		if (taskObj == null) {
+	private void storeCacheTaskInFile() throws IOException {
+		if (this._taskCacheQueue.isEmpty()) {
 			return;
 		}
 		MonitoringEncryptService monitoringEncryptService = ServiceHelper.findService(MonitoringEncryptService.class);
@@ -207,24 +241,32 @@ public class MonitoringTaskCacheService implements IService {
 			theLogger.error("No found MonitoringEncryptService ERROR");
 			return;
 		}
+		File taskCacheFile = new File(_taskCacheFile);
+		if (taskCacheFile.exists() == false) {
+			File parentFile = taskCacheFile.getParentFile();
+			if (parentFile.exists() == false) {
+				parentFile.mkdirs();
+			}
+		} else {
+			// clear the file content.
+			taskCacheFile.delete();
+		}
+		//
+		taskCacheFile.createNewFile();
+		//
 		PrintWriter filePrinter = null;
-		Date currentDay = new Date();
-		String taskDirName = _taskNameDataFormat1.format(currentDay);
-		String fileNameTimePrefix = _taskNameDataFormat2.format(currentDay);
 		try {
-			File taskFile = new File(_taskPath + taskDirName + File.separator + fileNameTimePrefix + "_" + fileNameTimePrefix
-					+ taskObj.getString(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME) + ".json");
-			if (taskFile.getParentFile().exists() == false) {
-				taskFile.getParentFile().mkdirs();
+			filePrinter = new PrintWriter(taskCacheFile, Constants.DEFAULT_ENCODING);
+			for (int i = 0; i < _taskCacheQueue.size(); i++) {
+				String taskContent = _taskCacheQueue.get(i).toString();
+				if (Assert.isEmptyString(taskContent) == true) {
+					continue;
+				}
+				filePrinter.println(monitoringEncryptService.encode(taskContent));
 			}
-			if (taskFile.exists() == false) {
-				taskFile.createNewFile();
-			}
-			filePrinter = new PrintWriter(taskFile, Constants.DEFAULT_ENCODING);
-			filePrinter.print(monitoringEncryptService.encode(taskObj.toString()));
 			filePrinter.flush();
 		} catch (Exception e) {
-			theLogger.exception("Create task file error", e);
+			theLogger.exception(e);
 		} finally {
 			if (filePrinter != null) {
 				filePrinter.close();
@@ -234,43 +276,51 @@ public class MonitoringTaskCacheService implements IService {
 	}
 
 	/**
-	 * 核心出现问题时调用此方法获取前一天距离此当前时间最近，切5分钟内的任务
+	 * 核心出现问题时调用此方法获取前一天距离此当前时间最近，切5分钟内的任务 目前只考虑返回一个最近的任务,后期如果有需要再返回多个任务.
 	 * 
 	 * @return 任务对象
 	 */
 	public JSONObject getCacheTaskInReferent() {
-		Date d = new Date();
+		// Date d = new Date();
 		// 计算昨天此时的毫秒数
-		long yestoday = d.getTime() - 60 * 60 * 24 * 1000;
+		long yesterday = System.currentTimeMillis() - DAY_MSECONDS;
 		JSONObject temp = null;
 		// 间隔5分钟
-		long timeTemp = 5 * 60 * 1000;
+		long timeTemp = 300000;
 		// 遍历全部任务
 		Iterator<JSONObject> it = _taskCacheQueue.iterator();
 		while (it.hasNext()) {
 			JSONObject te = it.next();
-			String execT = "";
 			try {
-
-				execT = te.getString("execTime");
-
-				Date execD = _taskNameDataFormat2.parse(execT);
-				long yExecT = execD.getTime();
-				long spacing = 5 * 60 * 1000;// 将5分钟转换为毫秒
-				d.setTime(yestoday);
-				// 昨天的此时间点减去任务执行时间，差值大于0，小于5分钟，且差值最小，则为需要执行的时间。
-				if ((yestoday - yExecT) > 0 && (yestoday - yExecT) <= spacing && (yestoday - yExecT) < timeTemp) {
-					timeTemp = yestoday - yExecT;
-					temp = te;
+				String execT = te.getString("create_at");
+				if (Assert.isEmptyString(execT) == true) {
+					continue;
 				}
-			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				System.out.println("获取前一天此时刻任务，执行日期解析错误：" + execT);
-				e.printStackTrace();
+				//
+				// Date execD = _taskNameDataFormat2.parse(execT);
+				// long yExecT = execD.getTime();
+				//
+				long yExecT = Long.parseLong(execT);
+				if (yExecT > yesterday) {
+					continue;
+				}
+				long timeInterval = yesterday - yExecT;
+				// [n-timeTemp,n]
+				if (timeInterval > timeTemp) {
+					continue;
+				}
+				// long spacing = 300000;// 将5分钟转换为毫秒
+				// d.setTime(yesterday);
+				// 昨天的此时间点减去任务执行时间，差值大于0，小于5分钟，且差值最小，则为需要执行的时间。
+				// if ((yesterday - yExecT) > 0 && (yesterday - yExecT) <=
+				// spacing && (yesterday - yExecT) < timeTemp) {
+				// timeTemp = yesterday - yExecT;
+				// temp = te;
+				// }
+				timeTemp = timeInterval;
+				temp = te;
 			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				System.out.println("解析JSONOBJECT ，获取时间失败");
-				e.printStackTrace();
+				theLogger.exception(e);
 
 			}
 		}
@@ -278,37 +328,39 @@ public class MonitoringTaskCacheService implements IService {
 	}
 
 	/**
+	 * remove all cache task before the clear point.
+	 * 
+	 * @param clearTimePoint
 	 * @return
 	 */
-	public JSONObject getOneTaskFromCache() {
+	public int clearCacheTaskByTimePoint(long clearTimePoint) {
+		if (clearTimePoint >= 0) {
+			return 0;
+		}
+		int clearTaskCouter = 0;
 		synchronized (_taskCacheQueue) {
-			if (_taskCacheQueue.isEmpty() == false) {
-				return _taskCacheQueue.get(0);
-			} else {
-				return null;
+			Iterator<JSONObject> taskIter = _taskCacheQueue.iterator();
+			JSONObject targetTask = null;
+			while (taskIter.hasNext()) {
+				targetTask = taskIter.next();
+				try {
+					String createAt = targetTask.getString("create_at");
+					if (Assert.isEmptyString(createAt) == true) {
+						continue;
+					}
+
+					long createAtVal = Long.parseLong(createAt);
+					if (createAtVal > clearTimePoint) {
+						continue;
+					}
+					taskIter.remove();
+					clearTaskCouter++;
+				} catch (JSONException e) {
+					theLogger.exception(e);
+				}
 			}
-
 		}
-	}
-
-	/**
-	 * get the size of task quque in cache.
-	 * 
-	 * @return
-	 */
-	public int getTaskCacheQueueSize() {
-		synchronized (_taskCacheQueue) {
-			return _taskCacheQueue.size();
-		}
-	}
-
-	/**
-	 * get hole task queue from local queue
-	 * 
-	 * @return
-	 */
-	public ArrayList<JSONObject> getTaskCacheQueue() {
-		return _taskCacheQueue;
+		return clearTaskCouter;
 	}
 
 	/**
@@ -323,7 +375,106 @@ public class MonitoringTaskCacheService implements IService {
 		synchronized (_taskCacheQueue) {
 			_taskCacheQueue.add(taskObj);
 		}
-		storeTaskInFile(taskObj);
 	}
 
+	// sample
+	/**
+	 * get local file storage name and path
+	 * 
+	 * @param fileContent
+	 * @return
+	 */
+	public String getFileStorageNameForTask() {
+		synchronized (_sampleNameDataFormat) {
+			String sampleFileName = _sampleNameDataFormat.format(new Date());
+			return sampleFileName + "_" + System.nanoTime() + ".sample";
+		}
+	}
+
+	/**
+	 * add a file path ,and ready to upload it.
+	 * 
+	 * @param fileName
+	 */
+	public void addUploadSampleForDisconnection(String fileName) {
+		if (fileName == null || fileName.length() == 0) {
+			return;
+		}
+		synchronized (this._uploadSampleFileQueue) {
+			this._uploadSampleFileQueue.add(fileName);
+		}
+	}
+
+	/**
+	 * load all sample file in local file system.
+	 */
+	private void initLocalUploadFile() {
+		File sampleDir = new File(this._waitUploadSampleLocalPath);
+		if (sampleDir.exists() == false) {
+			sampleDir.mkdirs();
+			return;
+		}
+		File[] sampleFiles = sampleDir.listFiles(_sampleFileFilter);
+		if (sampleFiles == null) {
+			return;
+		}
+		synchronized (_uploadSampleFileQueue) {
+			for (int i = 0; i < sampleFiles.length; i++) {
+				if (sampleFiles[i] == null || sampleFiles[i].isDirectory()) {
+					continue;
+				}
+				this._uploadSampleFileQueue.add(sampleFiles[i].getAbsolutePath());
+			}
+		}
+	}
+
+	/**
+	 * start the all upload for sample
+	 * 
+	 * @param uploadThreads
+	 */
+	private void initUploadSampleThread(Thread[] uploadThreads) {
+		for (int i = 0; i < uploadThreads.length; i++) {
+			uploadThreads[i] = new Thread("MonitoringTaskCacheService.uploadSampleThread#" + i) {
+				public void run() {
+					while (true) {
+						try {
+							sleep(2000L);
+							// upload the raw data to server
+							uploadSampleDataForFile();
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}
+
+			};
+			uploadThreads[i].start();
+		}
+	}
+
+	/**
+	 * upload metric in package to server
+	 */
+	private void uploadSampleDataForFile() {
+		if (_storageAdapter == null) {
+			_storageAdapter = ServiceHelper.findService(StorageAdapterService.class);
+		}
+		String pathName = null;
+		synchronized (this._uploadSampleFileQueue) {
+			if (this._uploadSampleFileQueue.isEmpty()) {
+				return;
+			}
+			pathName = this._uploadSampleFileQueue.remove(0);
+		}
+		try {
+			String sampleDataContent = FileSystemStorageUtil.readSampleDateToFile(pathName, true);
+			if (Assert.isEmptyString(sampleDataContent)) {
+				return;
+			}
+			_storageAdapter.uploadRawData(sampleDataContent);
+		} catch (Exception e) {
+			theLogger.exception(e);
+		}
+	}
 }
