@@ -24,6 +24,7 @@ public class CacheTaskManageAction extends TimerTask {
 	@Override
 	public void run() {
 		theLogger.info("startAction");
+		// get time point before two days age.
 		long twoDaysAgoPoint = System.currentTimeMillis() - MonitoringTaskCacheService.DAY_MSECONDS * 2;
 		int clearCacheTaskResult = _monitoringTaskCacheService.clearCacheTaskByTimePoint(twoDaysAgoPoint);
 		theLogger.info("removeResult", String.valueOf(clearCacheTaskResult));

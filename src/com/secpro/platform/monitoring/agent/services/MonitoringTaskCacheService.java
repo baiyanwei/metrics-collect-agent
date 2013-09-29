@@ -21,6 +21,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.secpro.platform.core.metrics.AbstractMetricMBean;
+import com.secpro.platform.core.metrics.Metric;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.services.ServiceInfo;
@@ -36,7 +37,7 @@ import com.secpro.platform.monitoring.agent.utils.file.FileSystemStorageUtil;
  * 
  *         用以将任务进行缓存和本地文件存储，以及采集端启动时从本地文件读取近两天执行过的任务, 上传错误的SAMPLE.
  */
-@ServiceInfo(description = "metric upload service, upload the metric to data process server.", configurationPath = "mca/services/MonitoringTaskCacheService/")
+@ServiceInfo(description = "task and sample local cache.", configurationPath = "mca/services/MonitoringTaskCacheService/")
 public class MonitoringTaskCacheService extends AbstractMetricMBean implements IService, DynamicMBean {
 	//
 	final private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringTaskCacheService.class);
@@ -54,29 +55,11 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	/**
 	 * local task storage in directory
 	 */
-	@XmlElement(name = "taskCacheFile", defaultValue = "data/mca/task/")
-	public String _taskCacheFile = "data/mca/task/";
-	/**
-	 * the prefix name of task file
-	 */
-	@XmlElement(name = "prefixTaskName", defaultValue = "task")
-	public String _prefixTaskName;
-	// TODO remove later
-	@XmlElement(name = "taskExecuteHour", type = Long.class, defaultValue = "21")
-	public Long _taskExecuteHour;
-	@XmlElement(name = "taskExecMin", type = Long.class, defaultValue = "45")
-	public Long _taskExecMin;
-	@XmlElement(name = "taskExecSec", type = Long.class, defaultValue = "0")
-	public Long _taskExecSec;
-	// END remove later
-	@XmlElement(name = "taskNameTimeFormat1", defaultValue = "yyyyMMdd")
-	public String _taskNameTimeFormat1 = "yyyyMMdd";
-
-	@XmlElement(name = "taskNameTimeFormat2", defaultValue = "yyyyMMddHHmmss")
-	public String _taskNameTimeFormat2 = "yyyyMMddHHmmss";
+	@XmlElement(name = "taskCacheFile", defaultValue = "data/mca/task/taskCache.list")
+	public String _taskCacheFile = "data/mca/task/taskCache.list";
 
 	@XmlElement(name = "sampleFileNameTimeFormat", defaultValue = "yyyyMMddHHmmssSSS")
-	public String _sampleFileNameTimeFormat = "yyyyMMdd";
+	public String _sampleFileNameTimeFormat = "yyyyMMddHHmmssSSS";
 
 	@XmlElement(name = "taskTimerExecuteInterval", type = Long.class, defaultValue = "86400000")
 	public long _taskTimerExecuteInterval = 86400000;
@@ -85,7 +68,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	private Timer _taskManageTimer = null;
 	private FilenameFilter _sampleFileFilter = null;
 	// sample
-	@XmlElement(name = "waitUploadSampleLocalPath", defaultValue = "/home/baiyanwei/secpro/project/run/waitupload")
+	@XmlElement(name = "waitUploadSampleLocalPath", defaultValue = "/data/mca/sample/waitupload/")
 	public String _waitUploadSampleLocalPath = "";
 	/**
 	 * upload file name list.
@@ -105,8 +88,6 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	public void start() throws Exception {
 		// register itself as dynamic bean
 		this.registerMBean(_jmxObjectName, this);
-		//
-		loadLocalTaskByFile();
 		//
 		if (_isflag) {
 			Date today = new Date();
@@ -128,6 +109,16 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 		initLocalUploadFile();
 		_uploadSampleThreads = new Thread[1];
 		initUploadSampleThread(_uploadSampleThreads);
+		Thread loadTaskCacheFileThread = new Thread("MonitoringTaskCacheService.loadTaskCacheFileThread") {
+			public void run() {
+				try {
+					loadLocalTaskByFile();
+				} catch (IOException e) {
+					theLogger.exception(e);
+				}
+			}
+		};
+		loadTaskCacheFileThread.start();
 		_storeCacheTaskThread = new Thread("MonitoringTaskCacheService.storeCacheTaskThread") {
 			public void run() {
 				while (true) {
@@ -232,7 +223,8 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	 *            JSON格式的任务
 	 * @throws IOException
 	 */
-	private void storeCacheTaskInFile() throws IOException {
+	@Metric(description = "Just for test")
+	public void storeCacheTaskInFile() throws IOException {
 		if (this._taskCacheQueue.isEmpty()) {
 			return;
 		}
@@ -334,7 +326,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	 * @return
 	 */
 	public int clearCacheTaskByTimePoint(long clearTimePoint) {
-		if (clearTimePoint >= 0) {
+		if (clearTimePoint <= 0) {
 			return 0;
 		}
 		int clearTaskCouter = 0;
@@ -348,7 +340,6 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 					if (Assert.isEmptyString(createAt) == true) {
 						continue;
 					}
-
 					long createAtVal = Long.parseLong(createAt);
 					if (createAtVal > clearTimePoint) {
 						continue;
@@ -387,7 +378,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	public String getFileStorageNameForTask() {
 		synchronized (_sampleNameDataFormat) {
 			String sampleFileName = _sampleNameDataFormat.format(new Date());
-			return sampleFileName + "_" + System.nanoTime() + ".sample";
+			return _waitUploadSampleLocalPath + sampleFileName + "_" + System.nanoTime() + ".sample";
 		}
 	}
 
