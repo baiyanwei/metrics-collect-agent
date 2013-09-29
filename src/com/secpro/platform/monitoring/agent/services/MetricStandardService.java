@@ -39,8 +39,8 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 
 	private HashMap<String, JSONObject> _metricStandardRuleMap = new HashMap<String, JSONObject>();
 
-	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=MetricStandardService")
-	public String _jmxObjectName = "secpro:type=MetricStandardService";
+	@XmlElement(name = "jmxObjectName", defaultValue = "secpro.mca:type=MetricStandardService")
+	public String _jmxObjectName = "secpro.mca:type=MetricStandardService";
 	@XmlElement(name = "hostName")
 	public String _hostName = "";
 

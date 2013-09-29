@@ -198,7 +198,7 @@ public class FetchSysLogStandardRuleAction extends Thread {
 			return false;
 		}
 		if (ruleObject.has("checkAction") == false) {
-			theLogger.warn("errorRuleFormat", "protoFormat");
+			theLogger.warn("errorRuleFormat", "checkAction");
 			return false;
 		}
 		if (ruleObject.has("regexs") == false) {

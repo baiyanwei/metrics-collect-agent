@@ -18,8 +18,8 @@ import com.secpro.platform.log.utils.PlatformLogger;
 public class MonitoringNodeService extends AbstractMetricMBean implements IService, DynamicMBean {
 	final private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringNodeService.class);
 	//
-	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=MonitoringNodeService")
-	public String _jmxObjectName = "secpro:type=MonitoringNodeService";
+	@XmlElement(name = "jmxObjectName", defaultValue = "secpro.mca:type=MonitoringNodeService")
+	public String _jmxObjectName = "secpro.mca:type=MonitoringNodeService";
 	@XmlElement(name = "nodeLocation", defaultValue = "HB")
 	public String _nodeLocation = "";
 

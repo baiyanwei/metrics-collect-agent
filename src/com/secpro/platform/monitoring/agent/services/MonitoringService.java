@@ -60,8 +60,8 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	 */
 	public Long _workflowThreshold = new Long(1);
 
-	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=MonitoringService")
-	public String _jmxObjectName = "secpro:type=MonitoringService";
+	@XmlElement(name = "jmxObjectName", defaultValue = "secpro.mca:type=MonitoringService")
+	public String _jmxObjectName = "secpro.mca:type=MonitoringService";
 
 	// cache the version number
 	@Metric(description = "The version number of MCA")
@@ -197,7 +197,7 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 					cal.setTimeInMillis(currentTime);
 
 					// Need to create a unique name for the object.
-					workflow._jmxObjectName  ="secpro:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-"
+					workflow._jmxObjectName  ="secpro.mca:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-"
 							+ String.valueOf(_monitoringWorkflows.size());
 					// register workflows as dynamic bean
 					this.registerMBean(workflow._jmxObjectName,workflow);

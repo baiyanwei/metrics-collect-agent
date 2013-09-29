@@ -43,8 +43,8 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	final private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringTaskCacheService.class);
 	//
 	final public static long DAY_MSECONDS = 86400000L;
-	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=MonitoringTaskCacheService")
-	public String _jmxObjectName = "secpro:type=MonitoringTaskCacheService";
+	@XmlElement(name = "jmxObjectName", defaultValue = "secpro.mca:type=MonitoringTaskCacheService")
+	public String _jmxObjectName = "secpro.mca:type=MonitoringTaskCacheService";
 	//
 	// The cache for task in local
 	private ArrayList<JSONObject> _taskCacheQueue = new ArrayList<JSONObject>();
@@ -194,7 +194,6 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 				synchronized (_taskCacheQueue) {
 					try {
 						_taskCacheQueue.add(new JSONObject(monitoringEncryptService.decode(lineStr)));
-						System.out.println(">>>>>>>" + _taskCacheQueue.get(_taskCacheQueue.size() - 1));
 					} catch (JSONException e) {
 						theLogger.exception(e);
 					}

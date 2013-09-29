@@ -24,8 +24,8 @@ public class StorageAdapterService extends AbstractMetricMBean implements IServi
 
 	@XmlElement(name = "storageType")
 	public String _storageType = "";
-	@XmlElement(name = "jmxObjectName", defaultValue = "secpro:type=StorageAdapterService")
-	public String _jmxObjectName = "secpro:type=StorageAdapterService";
+	@XmlElement(name = "jmxObjectName", defaultValue = "secpro.mca:type=StorageAdapterService")
+	public String _jmxObjectName = "secpro.mca:type=StorageAdapterService";
 	//
 	// count for how many request MCA sends to DPU.
 	public long _sendRquestCount = 0;
