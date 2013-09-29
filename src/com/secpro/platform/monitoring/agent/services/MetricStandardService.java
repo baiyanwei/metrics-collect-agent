@@ -22,7 +22,12 @@ import com.secpro.platform.core.services.ServiceInfo;
 import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.FetchSysLogStandardRuleAction;
-
+/**
+ * 
+ * @author sxf
+ * MOD Sep 21, 2013
+ * 将部分功能转移到核心，进行syslog日志二次标准化
+ */
 @ServiceInfo(description = "SYSLOG record stander service", configurationPath = "mca/services/MetricStandardService/")
 public class MetricStandardService extends AbstractMetricMBean implements IService, DynamicMBean {
 
@@ -88,17 +93,7 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		if (Assert.isEmptyString(ip) == true||ruleObj == null) {
 			return null;
 		}
-		//String ruleKey = ip + "_" + t;
-		//JSONObject ruleObj = new JSONObject();
-		//try {
-			//ruleObj.put("ip", ip);
-			//ruleObj.put("type", type);
-		// ruleObj.put("rule", regexs);
-		// } catch (JSONException e) {
-		// theLogger.exception(e);
-		// }
 		synchronized (this._metricStandardRuleMap) {
-			//this._metricStandardRuleMap.put(ruleKey, ruleObj);
 			this._metricStandardRuleMap.put(ip, ruleObj);
 		}
 		return ruleObj;
@@ -123,7 +118,7 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		} catch (JSONException e) {
 			theLogger.exception(e);
 		}
-
+		
 		return ruleObj;
 	}
 
@@ -160,46 +155,52 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		}
 		return this._metricStandardRuleMap.get(ip);
 	}
-
-	// private HashMap<String, String> matcherSyslog(String syslog, String
-	// regex) {
-	// HashMap<String, String> resultMap = null;
-	// if (syslog.trim().length() > 0) {
-	// List<String> keys = new ArrayList<String>();
-	// Pattern pattern = Pattern.compile("(<\\w+>)");
-	// Matcher mat = pattern.matcher(regex);
-	// int i = 0;
-	// if (mat.find()) {
-	// while (mat.find(i)) {
-	// String key = mat.group(1);
-	// keys.add(key.substring(key.indexOf("<") + 1, key.lastIndexOf(">")));
-	// i = mat.end();
-	// }
-	// String newRegex = mat.replaceAll("");
-	// resultMap = matcherSyslogC(syslog, newRegex, keys);
-	// }
-	//
-	// }
-	// return resultMap;
-	// }
-
-	// private HashMap<String, String> matcherSyslogC(String syslog, String
-	// regex, List<String> keys) {
-	// HashMap<String, String> resultMap = null;
-	// Pattern pattern = Pattern.compile(regex);
-	// Matcher mat = pattern.matcher(syslog);
-	// if (mat.find()) {
-	// int count = mat.groupCount();
-	// if (keys.size() >= count) {
-	// resultMap = new HashMap<String, String>();
-	// for (int i = 0; i < count; i++) {
-	// resultMap.put(keys.get(i), mat.group(i + 1));
-	// }
-	// }
-	// }
-	// return resultMap;
-	//
-	// }
+	/**
+	 * 提供syslog标准化后上传条件，checkNum：成功标准化的元素个数
+	 * @param ip
+	 * @return
+	 */
+	public int findCheckNum(String ip){
+		JSONObject standardRuleObj = findRegexs(ip);
+		if (standardRuleObj == null) {
+			return -1;
+		}
+		if (standardRuleObj.has("checkNum") == false) {
+			return -1;
+		}
+		
+		try {
+			int checkNum=standardRuleObj.getInt("checkNum");
+			return checkNum>=0?checkNum:-1;
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			theLogger.exception(e);
+		}
+		return -1;
+	}
+	/**
+	 * 提供syslog标准化后上传条件，checkAction(可能取值drop,upload)：根据参数值判断是否上传原始日志
+	 * @param ip
+	 * @return
+	 */
+	public String findCheckAction(String ip){
+		JSONObject standardRuleObj = findRegexs(ip);
+		if (standardRuleObj == null) {
+			return null;
+		}
+		if (standardRuleObj.has("checkAction") == false) {
+			return null;
+		}
+		
+		try {
+			return standardRuleObj.getString("checkAction");
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			theLogger.exception(e);
+		}
+		return null;
+	}
 
 	/**
 	 * fetch all syslog standard rules from server when starting.
@@ -220,6 +221,7 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		if (Assert.isEmptyString(syslog) == true) {
 			return null;
 		}
+		
 		JSONObject standardRuleObj = findRegexs(ip);
 		if (standardRuleObj == null) {
 			return null;
@@ -229,35 +231,31 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 			if (regexs == null) {
 				return null;
 			}
+			String[] properties = JSONObject.getNames(regexs);
+			if(properties==null){
+				return null;
+			}
 			HashMap<String, String> result = new HashMap<String, String>();
 
 			int flag = 0;
-
-			String[] properties = JSONObject.getNames(regexs);
 			for (int i = 0; i < properties.length; i++) {
 				String property = properties[i];
+				if(property==null||"".equals(property))
+				{
+					return null;
+				}
 				String regex = regexs.getString(property);
+				if(regex==null||"".equals(regex))
+				{
+					return null;
+				}
 				Pattern pattern = Pattern.compile(regex);
 				Matcher mat = pattern.matcher(syslog);
 
 				if (mat.find()) {
-					if (property != null && !("".equals(property))) {
-						if ("protocol".equals(property)) {
-							String value = protocolFormat(standardRuleObj, mat.group(1));
-
-							result.put(property, value);
-							flag++;
-						} else if ("date".equals(property)) {
-							String value = dateFormat(standardRuleObj, mat.group(1));
-							result.put(property, value);
-							flag++;
-						} else {
-							result.put(property, mat.group(1));
-							flag++;
-						}
-
-					}
-
+				
+						result.put(property, mat.group(1));
+						flag++;
 				}
 
 			}
@@ -271,80 +269,6 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		}
 		return null;
 
-	}
-
-	/**
-	 * format the protocol of syslog
-	 * 
-	 * @param sys
-	 * @param before
-	 * @return
-	 */
-	private static String protocolFormat(JSONObject standardRuleObj, String before) {
-		try {
-			if (standardRuleObj.has("protocolFormat") == false || standardRuleObj.get("protocolFormat") == null) {
-				return null;
-			}
-			JSONObject ProtoFormatObj = standardRuleObj.getJSONObject("protocolFormat");
-			if(ProtoFormatObj.has(before) == false || ProtoFormatObj.get(before) == null)
-			{
-				return before;
-			}
-				
-			String value = ProtoFormatObj.getString(before);
-			return value;
-		} catch (JSONException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return before;
-
-	}
-
-	private static String dateFormat(JSONObject standardRuleObj, String dateS) {
-		try {
-	
-			if (standardRuleObj.has("dateFormat") == false || standardRuleObj.get("dateFormat") == null) {
-				return dateS;
-			}
-			String dateFormat = standardRuleObj.getString("dateFormat");
-			
-			String after = null;
-			
-				if (dateFormat.indexOf("y") == -1) {
-
-					Calendar calendar = Calendar.getInstance();
-					calendar.setTime(new Date());
-					int year = calendar.get(Calendar.YEAR);
-					SimpleDateFormat format = new SimpleDateFormat(dateFormat, Locale.US);
-					try {
-						Date dateD = format.parse(dateS);
-						SimpleDateFormat sdf1 = new SimpleDateFormat("MMddHHmmss");
-						String dateS1 = sdf1.format(dateD);
-						after = year + dateS1;
-						return after;
-					} catch (ParseException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} else {
-					SimpleDateFormat format = new SimpleDateFormat(dateFormat, Locale.US);
-					try {
-						Date dateD = format.parse(dateS);
-						SimpleDateFormat sdf1 = new SimpleDateFormat("yyyyMMddHHmmss");
-						String dateS1 = sdf1.format(dateD);
-						after = dateS1;
-						return after;
-					} catch (ParseException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-
-					}
-				}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return dateS;
 	}
 
 }

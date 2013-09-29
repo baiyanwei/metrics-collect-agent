@@ -41,12 +41,12 @@ public class SNMPOperation extends MonitorOperation {
 			}
 			int port = Integer.parseInt(protStr);
 			//
-			String community = metaMap.get("community");
-			if (Assert.isEmptyString(protStr) == true) {
-				throw new PlatformException("invalid community in SNMP operation.");
-			}
+			String community = metaMap.get("community");//为snmpv3版本时，不需要community
+//			if (Assert.isEmptyString(community) == true) {
+//				throw new PlatformException("invalid community in SNMP operation.");
+//			}
 			String mibs = metaMap.get("mibs");
-			if (Assert.isEmptyString(protStr) == true) {
+			if (Assert.isEmptyString(mibs) == true) {
 				throw new PlatformException("invalid mibs in SNMP operation.");
 			}
 			String[] mibArray = mibs.split(",");

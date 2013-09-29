@@ -183,29 +183,24 @@ public class FetchSysLogStandardRuleAction extends Thread {
 	private boolean checkForRuleFormat(JSONObject ruleObject) {
 		/*
 		{
-			ip string
-			regexs Map
-			protoFormat Map
-			num int
-			dateFormat string
+			ip string： 采集对象IP地址
+			regexs Map： syslog正则表达式规则库
+			checkNum int：syslog标准化后上发条件
+			checkAction String：syslog标准化后上传动作
 		}
 		*/
 		if (ruleObject.has("ip") == false) {
 			theLogger.warn("errorRuleFormat", "ip");
 			return false;
 		}
-//		if (ruleObject.has("num") == false) {
-//			theLogger.warn("errorRuleFormat", "num");
-//			return false;
-//		}
-//		if (ruleObject.has("protoFormat") == false) {
-//			theLogger.warn("errorRuleFormat", "protoFormat");
-//			return false;
-//		}
-//		if (ruleObject.has("dateFormat") == false) {
-//			theLogger.warn("errorRuleFormat", "dateFormat");
-//			return false;
-//		}
+		if (ruleObject.has("checkNum") == false) {
+			theLogger.warn("errorRuleFormat", "checkNum");
+			return false;
+		}
+		if (ruleObject.has("checkAction") == false) {
+			theLogger.warn("errorRuleFormat", "protoFormat");
+			return false;
+		}
 		if (ruleObject.has("regexs") == false) {
 			theLogger.warn("errorRuleFormat", "regexs");
 			return false;

@@ -39,8 +39,8 @@ import com.secpro.platform.log.utils.PlatformLogger;
 
 /**
  * 
- * @author sxf
- * 
+ * @author sxf  
+ * MOD Sep 19, 2013
  *         This class provides the methods of snmp all versions include the
  *         snmpv1,v2c,v3
  */
@@ -49,6 +49,8 @@ public class SNMPCollectAdapter {
 	private TransportMapping _transportMapping = null;
 	private Snmp _snmp = null;
 	private boolean _flag = false;
+	private long _timeout=5000;
+	private int _retries=2;
 
 	/**
 	 * the method is based on snmp version to call other methods
@@ -56,44 +58,46 @@ public class SNMPCollectAdapter {
 	 * @param snmp
 	 * @return
 	 */
-	public HashMap<String, String> snmpAllVer(SNMPReferentBean snmp) {
-		String targetIP = snmp.getTargetIP();
+	public HashMap<String, String> snmpAllVer(SNMPReferentBean snmpBean) {
+		String targetIP = snmpBean.getTargetIP();
 		HashMap<String, String> resultMap = null;
 
 		if (isboolIP(targetIP)) {
 			int portDefault = 161;
-			List<String> mibList = snmp.getMibList();
-			int port = snmp.getPort();
+			List<String> mibList = snmpBean.getMibList();
+			int port = snmpBean.getPort();
 			if (port != 0) {
 				portDefault = port;
 			}
-			Address targetAddress = GenericAddress.parse("udp:" + targetIP + "/" + portDefault);
+			Address targetAddress = GenericAddress.parse("udp:" + targetIP
+					+ "/" + portDefault);
 			if (mibList != null && mibList.size() > 0) {
-				int version = snmp.getVersion();
-			
+				int version = snmpBean.getVersion();
+
 				if (version == 1) {
-					String community = snmp.getCommunity();
+					String community = snmpBean.getCommunity();
 					if (community != null) {
 						resultMap = snmpV1(targetAddress, community, mibList);
 					}
 				} else if (version == 2) {
-					String community = snmp.getCommunity();
+					String community = snmpBean.getCommunity();
 					if (community != null) {
 						resultMap = snmpV2(targetAddress, community, mibList);
 					}
 				} else if (version == 3) {
-					String userName = snmp.getUserName();
+					String userName = snmpBean.getUserName();
 					if (userName != null) {
-						String auth = snmp.getAuth();
-						String authPass = snmp.getAuthPass();
-						String priv = snmp.getPriv();
-						String privPass = snmp.getPrivPass();
-						resultMap = snmpV3(targetAddress, mibList, userName, auth, authPass, priv, privPass);
+						String auth = snmpBean.getAuth();
+						String authPass = snmpBean.getAuthPass();
+						String priv = snmpBean.getPriv();
+						String privPass = snmpBean.getPrivPass();
+						resultMap = snmpV3(targetAddress, mibList, userName,
+								auth, authPass, priv, privPass);
 					}
-					} else {
-						theLogger.warn("versionError", version);
-					}
-				
+				} else {
+					theLogger.warn("versionError", version);
+				}
+
 			} else {
 				theLogger.warn("invalidOID", "null");
 			}
@@ -138,8 +142,9 @@ public class SNMPCollectAdapter {
 	 * @return
 	 * @throws IOException
 	 */
-	private HashMap<String, String> snmpV3(Address targetAddress, List<String> mibList, String userName, String auth, String authPass, String priv, String privPass)
-			{
+	private HashMap<String, String> snmpV3(Address targetAddress,
+			List<String> mibList, String userName, String auth,
+			String authPass, String priv, String privPass) {
 		HashMap<String, String> resultMap = new HashMap<String, String>();
 		OID authID = AuthMD5.ID;
 		OID privID = PrivDES.ID;
@@ -174,19 +179,24 @@ public class SNMPCollectAdapter {
 		try {
 			_transportMapping = new DefaultUdpTransportMapping();
 			_snmp = new Snmp(_transportMapping);
-			MPv3 mpv3 = (MPv3) _snmp.getMessageProcessingModel(MessageProcessingModel.MPv3);
+			MPv3 mpv3 = (MPv3) _snmp
+					.getMessageProcessingModel(MessageProcessingModel.MPv3);
 			USM usm = new USM(SecurityProtocols.getInstance(), new OctetString(mpv3.createLocalEngineID()), 0);
 			SecurityModels.getInstance().addSecurityModel(usm);
 			_transportMapping.listen();
 			// add user to the USM
-			_snmp.getUSM().addUser(new OctetString(userName), new UsmUser(new OctetString(userName), authID, new OctetString(authPass), privID, new OctetString(privPass)));
+			_snmp.getUSM().addUser(
+					new OctetString(userName),
+					new UsmUser(new OctetString(userName), authID,
+							new OctetString(authPass), privID, new OctetString(
+									privPass)));
 			// create the target
 			UserTarget target = new UserTarget();
 			target.setAddress(targetAddress);
 			// set the retries
-			target.setRetries(2);
+			target.setRetries(_retries);
 			// set the timeout
-			target.setTimeout(5000);
+			target.setTimeout(_timeout);
 			target.setVersion(SnmpConstants.version3);
 			target.setSecurityLevel(securityLevel);
 			target.setSecurityName(new OctetString(userName));
@@ -201,32 +211,36 @@ public class SNMPCollectAdapter {
 			// ResponseEvent response = _snmp.send(pdu, target);
 			if (respEvt != null && respEvt.getResponse() != null) {
 				Vector<VariableBinding> recVBs = (Vector<VariableBinding>) respEvt.getResponse().getVariableBindings();
-				if(recVBs!=null){
+				if (recVBs != null) {
 					for (int i = 0; i < recVBs.size(); i++) {
 						VariableBinding recVB = recVBs.elementAt(i);
-						if(recVB!=null&&recVB.getVariable()!=null&&recVB.getOid()!=null)
-						{
-							if ("nosuchobject".equals(recVB.getVariable().toString().toLowerCase())) {
-								resultMap.put(recVB.getOid().toString(), "nosuchobject");
-								_flag=true;
-							}else if("1.3.6.1.6.3.15.1.1.3.0".equals(recVB.getOid().toString())||"1.3.6.1.6.3.15.1.1.5.0".equals(recVB.getOid().toString())||"null".equals(recVB.getVariable().toString().toLowerCase()))
-							{
-								_flag=false;
-							}
-							else {
-								resultMap.put(recVB.getOid().toString(), recVB.getVariable().toString());
-								_flag=true;
+						if (recVB != null && recVB.getVariable() != null
+								&& recVB.getOid() != null) {
+							String OIDKey = recVB.getOid().toString();
+							String OIDValue = recVB.getVariable().toString();
+							if ("null".equalsIgnoreCase(OIDValue)
+									|| "nosuchobject"
+											.equalsIgnoreCase(OIDValue)
+									|| "nosuchinstance"
+											.equalsIgnoreCase(OIDValue)) {
+								resultMap.put(recVB.getOid().toString(),
+										"nosuchobject");
+								_flag = true;
+							} else if ("1.3.6.1.6.3.15.1.1.3.0".equals(OIDKey)
+									|| "1.3.6.1.6.3.15.1.1.5.0".equals(OIDKey)) {
+								_flag = false;
+							} else {
+								resultMap.put(OIDKey, OIDValue);
+								_flag = true;
 							}
 
 						}
 					}
 				}
 			}
-			if(_flag==false)
-			{
-				for (int i = 0; i < mibList.size(); i++)
-				{
-					resultMap.put(mibList.get(i),"timeout");
+			if (_flag == false) {
+				for (int i = 0; i < mibList.size(); i++) {
+					resultMap.put(mibList.get(i), "timeout");
 				}
 				theLogger.warn("SNMPTimeout", targetAddress.toString());
 			}
@@ -262,7 +276,8 @@ public class SNMPCollectAdapter {
 	 * @return
 	 * @throws IOException
 	 */
-	private HashMap<String, String> snmpV2(Address targetAddress, String community, List<String> mibList) {
+	private HashMap<String, String> snmpV2(Address targetAddress,
+			String community, List<String> mibList) {
 		HashMap<String, String> resultMap = new HashMap<String, String>();
 		try {
 			_transportMapping = new DefaultUdpTransportMapping();
@@ -272,9 +287,10 @@ public class SNMPCollectAdapter {
 			target.setCommunity(new OctetString(community));
 			target.setAddress(targetAddress);
 			// set the retries
-			target.setRetries(2);
+			target.setRetries(_retries);
 			// set the timeout
-			target.setTimeout(5000);
+			target.setTimeout(_timeout);
+			System.out.println(target.getRetries()+"sssssssss"+target.getTimeout());
 			target.setVersion(SnmpConstants.version2c);
 			PDU pdu = new PDU();
 			for (int i = 0; i < mibList.size(); i++) {
@@ -284,26 +300,30 @@ public class SNMPCollectAdapter {
 			ResponseEvent respEvt = _snmp.send(pdu, target);
 			if (respEvt != null && respEvt.getResponse() != null) {
 				Vector<VariableBinding> recVBs = (Vector<VariableBinding>) respEvt.getResponse().getVariableBindings();
-				if(recVBs!=null){
+				if (recVBs != null) {
 					for (int i = 0; i < recVBs.size(); i++) {
 						VariableBinding recVB = recVBs.elementAt(i);
-						if(recVB!=null&&recVB.getVariable()!=null&&recVB.getOid()!=null)
-						{
-							if ("nosuchobject".equals(recVB.getVariable().toString().toLowerCase())) {
-								resultMap.put(recVB.getOid().toString(),"nosuchobject");
+						if (recVB != null && recVB.getVariable() != null
+								&& recVB.getOid() != null) {
+							String OIDKey = recVB.getOid().toString();
+							String OIDValue = recVB.getVariable().toString();
+							if ("null".equalsIgnoreCase(OIDValue)
+									|| "nosuchobject"
+											.equalsIgnoreCase(OIDValue)
+									|| "nosuchinstance"
+											.equalsIgnoreCase(OIDValue)) {
+								resultMap.put(OIDKey, "nosuchobject");
 							} else {
-								resultMap.put(recVB.getOid().toString(), recVB.getVariable().toString());
+								resultMap.put(OIDKey, OIDValue);
 							}
-							_flag=true;
+							_flag = true;
 						}
 					}
 				}
 			}
-			if(_flag==false)
-			{
-				for (int i = 0; i < mibList.size(); i++)
-				{
-					resultMap.put(mibList.get(i),"timeout");
+			if (_flag == false) {
+				for (int i = 0; i < mibList.size(); i++) {
+					resultMap.put(mibList.get(i), "timeout");
 				}
 				theLogger.warn("SNMPTimeout", targetAddress.toString());
 			}
@@ -337,7 +357,8 @@ public class SNMPCollectAdapter {
 	 * @return
 	 * @throws IOException
 	 */
-	private HashMap<String, String> snmpV1(Address targetAddress, String community, List<String> mibList) {
+	private HashMap<String, String> snmpV1(Address targetAddress,
+			String community, List<String> mibList) {
 		HashMap<String, String> resultMap = new HashMap<String, String>();
 		try {
 			_transportMapping = new DefaultUdpTransportMapping();
@@ -346,10 +367,10 @@ public class SNMPCollectAdapter {
 			CommunityTarget target = new CommunityTarget();
 			target.setCommunity(new OctetString(community));
 			target.setAddress(targetAddress);
-			// set the retires
-			target.setRetries(2);
+			// set the retries
+			target.setRetries(_retries);
 			// set the timeout
-			target.setTimeout(5000);
+			target.setTimeout(_timeout);
 			target.setVersion(SnmpConstants.version1);
 			for (int i = 0; i < mibList.size(); i++) {
 				PDU pdu = new PDU();
@@ -358,26 +379,31 @@ public class SNMPCollectAdapter {
 				ResponseEvent respEvt = _snmp.send(pdu, target);
 				if (respEvt != null && respEvt.getResponse() != null) {
 					Vector<VariableBinding> recVBs = (Vector<VariableBinding>) respEvt.getResponse().getVariableBindings();
-					if(recVBs != null)
-					{
+					if (recVBs != null) {
 						VariableBinding recVB = recVBs.elementAt(0);
-						if(recVB != null&&recVB.getVariable() !=null &&recVB.getOid() != null)
-						{
-							if ("null".equals(recVB.getVariable().toString().toLowerCase())) {
-								resultMap.put(recVB.getOid().toString(),"nosuchobject");
+						if (recVB != null && recVB.getVariable() != null
+								&& recVB.getOid() != null) {
+							String OIDKey = recVB.getOid().toString();
+							String OIDValue = recVB.getVariable().toString();
+							if ("null".equalsIgnoreCase(OIDValue)
+									|| "nosuchobject"
+											.equalsIgnoreCase(OIDValue)
+									|| "nosuchinstance"
+											.equalsIgnoreCase(OIDValue)) {
+								resultMap.put(OIDKey, "nosuchobject");
 							} else {
-								resultMap.put(recVB.getOid().toString(), recVB.getVariable().toString());
+								resultMap.put(OIDKey, OIDValue);
 							}
-							_flag=true;
+							_flag = true;
 						}
-						
+
 					}
-				} 
-				if(_flag == false)
-				{
-					resultMap.put(mibList.get(i),"timeout");
+				}
+				if (_flag == false) {
+					resultMap.put(mibList.get(i), "timeout");
 					theLogger.warn("SNMPTimeout", targetAddress.toString());
 				}
+				_flag = false;
 			}
 		} catch (IOException e) {
 			theLogger.exception(e);

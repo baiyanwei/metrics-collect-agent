@@ -100,7 +100,8 @@ public class SyslogStore {
 				syslogMaxMB = _sysLogBeaconInterface._sysLogMax;
 				syslogMaxB = syslogMaxMB * 1024 * 1024;
 				// 当文件对象不为空，文件大小小于限制大小时
-
+				String checkAction="";
+				int checkNumber=-1;
 				if (f != null && f.length() <= syslogMaxB) {
 					for (int i = 0; i < temp.size(); i++) {
 							// 存储日志
@@ -109,24 +110,77 @@ public class SyslogStore {
 							String ip = syslog.getString("hostIP");
 							String msg = syslog.getString("msg");
 							String cdate = syslog.getString("cdate");
+							checkAction=_metricStandardService.findCheckAction(ip);
+							if(checkAction==null){
+								checkAction="drop";
+							}
+							checkNumber=_metricStandardService.findCheckNum(ip);
 							Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 							//如果解析出来的数据小于2个将不上传服务器，直接丢弃（一般都会有时间和类型）
 							//调试阶段暂时设置为0，后续调整为配置方式
-							if(syslogMap!=null&&syslogMap.size()>=0){
-								JSONObject syslogFormt = new JSONObject();
-								JSONObject sys=new JSONObject();
-								sys.put("ip", ip);
-								sys.put("ct", cdate);
-								sys.put("s", syslogMap);
-								//测试阶段暂时上传原始日志
-								sys.put("o", msg);
-								syslogFormt.put("syslog", sys); 
-								// put it into upload pool
-								if (_metricUploadService == null) {
-									_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+							if(syslogMap!=null&&checkAction.equals("drop")){
+								if(checkNumber==-1&&syslogMap.size()>0){
+									JSONObject syslogFormt = new JSONObject();
+									JSONObject sys=new JSONObject();
+									sys.put("ip", ip);
+									sys.put("ct", cdate);
+									sys.put("s", syslogMap);
+									//测试阶段暂时上传原始日志
+									//sys.put("o", null);
+									syslogFormt.put("syslog", sys); 
+									// put it into upload pool
+									if (_metricUploadService == null) {
+										_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+									}
+									_metricUploadService.addUploadMetric(syslogFormt);
+									// ---------------
+								}else if(checkNumber!=-1&&syslogMap.size()>checkNumber){
+									JSONObject syslogFormt = new JSONObject();
+									JSONObject sys=new JSONObject();
+									sys.put("ip", ip);
+									sys.put("ct", cdate);
+									sys.put("s", syslogMap);
+									//测试阶段暂时上传原始日志
+									//sys.put("o", msg);
+									syslogFormt.put("syslog", sys); 
+									// put it into upload pool
+									if (_metricUploadService == null) {
+										_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+									}
+									_metricUploadService.addUploadMetric(syslogFormt);
 								}
-								_metricUploadService.addUploadMetric(syslogFormt);
-								// ---------------
+							}else if(syslogMap!=null&&checkAction.equals("upload")){
+								if(checkNumber==-1){
+									JSONObject syslogFormt = new JSONObject();
+									JSONObject sys=new JSONObject();
+									sys.put("ip", ip);
+									sys.put("ct", cdate);
+									sys.put("s", syslogMap);
+									//测试阶段暂时上传原始日志
+									sys.put("o", msg);
+									syslogFormt.put("syslog", sys); 
+									// put it into upload pool
+									if (_metricUploadService == null) {
+										_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+									}
+									_metricUploadService.addUploadMetric(syslogFormt);
+									// ---------------
+								}else if(checkNumber!=-1&&syslogMap.size()>checkNumber){
+									
+									JSONObject syslogFormt = new JSONObject();
+									JSONObject sys=new JSONObject();
+									sys.put("ip", ip);
+									sys.put("ct", cdate);
+									sys.put("s", syslogMap);
+									//测试阶段暂时上传原始日志
+									sys.put("o", msg);
+									syslogFormt.put("syslog", sys); 
+									// put it into upload pool
+									if (_metricUploadService == null) {
+										_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+									}
+									_metricUploadService.addUploadMetric(syslogFormt);
+								}
 							}
 							// 存储文件
 							out.println(temp.get(i));
@@ -158,31 +212,85 @@ public class SyslogStore {
 					f.createNewFile();
 				}
 				out = new PrintStream(new FileOutputStream(f, true));
-
+				String checkAction="";
+				int checkNumber=-1;
 				for (int i = 0; i < temp.size(); i++) {
 						JSONObject syslog = temp.get(i);
 						// *******格式化********
 						String ip = syslog.getString("hostIP");
 						String msg = syslog.getString("msg");
 						String cdate = syslog.getString("cdate");
+						checkAction=_metricStandardService.findCheckAction(ip);
+						if(checkAction==null){
+							checkAction="drop";
+						}
+						checkNumber=_metricStandardService.findCheckNum(ip);
 						Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 						//如果解析出来的数据小于2个将不上传服务器，直接丢弃（一般都会有时间和类型）
 						//调试阶段暂时设置为0，后续调整为配置方式
-						if(syslogMap!=null&&syslogMap.size()>=0){
-							JSONObject syslogFormt = new JSONObject();
-							JSONObject sys=new JSONObject();
-							sys.put("ip", ip);
-							sys.put("ct", cdate);
-							sys.put("s", syslogMap);
-							//测试阶段暂时上传原始日志
-							sys.put("o", msg);
-							syslogFormt.put("syslog", sys);
-							// put it into upload pool
-							if (_metricUploadService == null) {
-								_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+						if(syslogMap!=null&&checkAction.equals("drop")){
+							if(checkNumber==-1&&syslogMap.size()>0){
+								JSONObject syslogFormt = new JSONObject();
+								JSONObject sys=new JSONObject();
+								sys.put("ip", ip);
+								sys.put("ct", cdate);
+								sys.put("s", syslogMap);
+								//测试阶段暂时上传原始日志
+								//sys.put("o", null);
+								syslogFormt.put("syslog", sys); 
+								// put it into upload pool
+								if (_metricUploadService == null) {
+									_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+								}
+								_metricUploadService.addUploadMetric(syslogFormt);
+								// ---------------
+							}else if(checkNumber!=-1&&syslogMap.size()>checkNumber){
+								JSONObject syslogFormt = new JSONObject();
+								JSONObject sys=new JSONObject();
+								sys.put("ip", ip);
+								sys.put("ct", cdate);
+								sys.put("s", syslogMap);
+								//测试阶段暂时上传原始日志
+								//sys.put("o", msg);
+								syslogFormt.put("syslog", sys); 
+								// put it into upload pool
+								if (_metricUploadService == null) {
+									_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+								}
+								_metricUploadService.addUploadMetric(syslogFormt);
 							}
-							_metricUploadService.addUploadMetric(syslogFormt);
-							// ---------------
+						}else if(syslogMap!=null&&checkAction.equals("upload")){
+							if(checkNumber==-1){
+								JSONObject syslogFormt = new JSONObject();
+								JSONObject sys=new JSONObject();
+								sys.put("ip", ip);
+								sys.put("ct", cdate);
+								sys.put("s", syslogMap);
+								//测试阶段暂时上传原始日志
+								sys.put("o", msg);
+								syslogFormt.put("syslog", sys); 
+								// put it into upload pool
+								if (_metricUploadService == null) {
+									_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+								}
+								_metricUploadService.addUploadMetric(syslogFormt);
+								// ---------------
+							}else if(checkNumber!=-1&&syslogMap.size()>checkNumber){
+								
+								JSONObject syslogFormt = new JSONObject();
+								JSONObject sys=new JSONObject();
+								sys.put("ip", ip);
+								sys.put("ct", cdate);
+								sys.put("s", syslogMap);
+								//测试阶段暂时上传原始日志
+								sys.put("o", msg);
+								syslogFormt.put("syslog", sys); 
+								// put it into upload pool
+								if (_metricUploadService == null) {
+									_metricUploadService = ServiceHelper.findService(MetricUploadService.class);
+								}
+								_metricUploadService.addUploadMetric(syslogFormt);
+							}
 						}
 						out.println(temp.get(i));
 				//	}

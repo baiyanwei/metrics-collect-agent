@@ -67,7 +67,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 
 	private static HashMap<String, MessageFormat> _messageFormatters = new HashMap<String, MessageFormat>();
 	private static String[] _messageFiles = new String[] { "error.js", "error-scheduled.js", "ssh.js", "ssh-scheduled.js", "finished.js", "finished-scheduled.js", "snmp.js",
-			"snmp-scheduled.js", "result.js", "result-scheduled.js" };
+			"snmp-scheduled.js","telnet.js","telnet-scheduled.js", "result.js", "result-scheduled.js" };
 
 	//
 	// We need to create the message formatters used in the workflow manager

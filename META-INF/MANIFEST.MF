@@ -12,6 +12,7 @@ Require-Bundle: org.eclipse.core.runtime,
  com.secpro.platform.api;bundle-version="1.0.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: .
 Import-Package: ch.ethz.ssh2,
  it.sauronsoftware.base64,
  org.apache.commons.net.telnet,
@@ -30,4 +31,3 @@ Import-Package: ch.ethz.ssh2,
  org.snmp4j.transport.tls,
  org.snmp4j.util,
  org.snmp4j.version
-Bundle-ClassPath: .
