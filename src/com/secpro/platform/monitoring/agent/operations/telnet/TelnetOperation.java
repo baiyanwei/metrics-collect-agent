@@ -48,45 +48,79 @@ public class TelnetOperation extends MonitorOperation {
 		}
 	}
 	public void login(String username, String password,String userPrompt,String passwdPrompt) {
-		readUntil(userPrompt);
-		write(username);
-		readUntil(passwdPrompt);
-		write(password);
-		readUntil(_prompt + " ");
+        readUntil(userPrompt);
+        write(username);
+        readUntil(passwdPrompt);
+        write(password);
+        readUntil(_prompt + "");
 	}
 
 	public String readUntil(String pattern) {
-		try {
-			char lastChar = pattern.charAt(pattern.length() - 1);
-			StringBuffer sb = new StringBuffer();
-			char ch = (char) _telnetIn.read();
-			while (true) {
-				if(ch=='\r'){
-					
-				}
-				else if(ch=='\n'){
-					sb.append('^');
-				}else{
-					sb.append(ch);
-				}
-				if (ch == lastChar) {
-					if (sb.toString().endsWith(pattern)) {
-						return sb.toString();
-					}
-				}
-				ch = (char) _telnetIn.read();
-				if(ch==')'){
-					write(" ");
-				}else if(ch=='-'){
-					write(" ");
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
+        try {
+                char lastChar = pattern.charAt(pattern.length() - 1);
+                StringBuffer sb = new StringBuffer();
+                char ch = (char) _telnetIn.read();
+                StringBuffer temp=new StringBuffer();
+                while (true) {
+                        if(ch=='\r'){
 
+                        }
+                        else if(ch=='\n'){
+                                sb.append('^');
+                                temp.delete(0, temp.length());
+                        }else{
+                                sb.append(ch);
+                                temp.append(ch);
+                        }
+              //          System.out.println(ch+"-------"+lastChar);
+                        if (ch == lastChar) {
+                                if (sb.toString().endsWith(pattern)) {
+                                        return sb.toString();
+                                }
+                        }
+                        ch = (char) _telnetIn.read();
+                        System.out.print(ch);
+                        
+                }
+        } catch (Exception e) {
+                e.printStackTrace();
+        }
+        return null;
+	}
+	public String readUntil(String pattern,String fenge,String fengeci) {
+        try {
+                char lastChar = pattern.charAt(pattern.length() - 1);
+                StringBuffer sb = new StringBuffer();
+                char ch = (char) _telnetIn.read();
+                StringBuffer temp=new StringBuffer();
+                while (true) {
+                        if(ch=='\r'){
+                        }
+                        else if(ch=='\n'){
+                                sb.append('^');
+                                temp.delete(0, temp.length());
+                        }else{
+                                sb.append(ch);
+                                temp.append(ch);
+                        }
+                        if (ch == lastChar) {
+                                if (sb.toString().endsWith(pattern)) {
+                                        return sb.toString();
+                                }
+                        }
+                        if((ch+"").equals(fenge)){
+                        	if(temp.toString().toLowerCase().contains(fengeci)){
+                                write(" ");
+                        	}
+                        }
+                        ch = (char) _telnetIn.read();
+                        System.out.print(ch);                      
+                }
+        } catch (Exception e) {
+                e.printStackTrace();
+        }
+        return null;
+}
 	public void write(String value) {
 		try {
 			_telnetOut.println(value);
@@ -96,17 +130,17 @@ public class TelnetOperation extends MonitorOperation {
 		}
 	}
 
-	public String sendCommand(String command,String openCommand,String execPrompt) {
-		try {
-			write(command);
-			if (command.equals(openCommand)) {
-				this._prompt = execPrompt;
-			}
-			return readUntil(_prompt + " ");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
+	public String sendCommand(String command,String openCommand,String execPrompt,String fenge,String fengeci) {
+        try {
+                write(command);
+                if (command.equals(openCommand)) {
+                        this._prompt = execPrompt;
+                }
+                return readUntil(_prompt + "",fenge,fengeci);
+        } catch (Exception e) {
+                e.printStackTrace();
+        }
+        return null;
 	}
 
 	public void disconnect() {
@@ -189,12 +223,20 @@ public class TelnetOperation extends MonitorOperation {
 		if (Assert.isEmptyString(passwdPrompt) == true) {
 			throw new PlatformException("invalid passwdPrompt in TELNET operation.");
 		}
+		String separPrompt=metaMap.get("separPrompt");
+		if (Assert.isEmptyString(separPrompt) == true) {
+			separPrompt="^";
+		}
+		String separWrod=metaMap.get("separWrod");
+		if (Assert.isEmptyString(separWrod) == true) {
+			separWrod="^";
+		}
 		try {
 			String shellCommands[] = shellCommand.split("\\^");
 			this.init(ip, Integer.parseInt(port), username, password,prompt, userPrompt, passwdPrompt);
 			StringBuilder results=new StringBuilder();
 			for(int i=0;i<shellCommands.length;i++){
-				String res=this.sendCommand(shellCommands[i], openCommand, execPrompt);
+				String res=this.sendCommand(shellCommands[i], openCommand, execPrompt,separPrompt,separWrod);
 				if(res!=null&&(!res.equals(""))){
 					if(!res.equals(shellCommands[i]))
 					results.append(res);
