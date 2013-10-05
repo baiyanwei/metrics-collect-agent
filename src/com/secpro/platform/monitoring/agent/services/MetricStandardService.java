@@ -161,6 +161,9 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @return
 	 */
 	public int findCheckNum(String ip){
+		if (Assert.isEmptyString(ip) == true) {
+			return -1;
+		}
 		JSONObject standardRuleObj = findRegexs(ip);
 		if (standardRuleObj == null) {
 			return -1;
@@ -180,17 +183,20 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		return -1;
 	}
 	/**
-	 * 提供syslog标准化后上传条件，checkAction(可能取值drop,upload)：根据参数值判断是否上传原始日志
+	 * 提供syslog标准化后上传条件，checkAction(可能取值0:drop,1:upload，默认为"0")：根据参数值判断是否上传原始日志
 	 * @param ip
 	 * @return
 	 */
 	public String findCheckAction(String ip){
+		if (Assert.isEmptyString(ip) == true) {
+			return "0";
+		}
 		JSONObject standardRuleObj = findRegexs(ip);
 		if (standardRuleObj == null) {
-			return null;
+			return "0";
 		}
 		if (standardRuleObj.has("checkAction") == false) {
-			return null;
+			return "0";
 		}
 		
 		try {
@@ -199,7 +205,7 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 			// TODO Auto-generated catch block
 			theLogger.exception(e);
 		}
-		return null;
+		return "0";
 	}
 
 	/**
@@ -218,21 +224,25 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @return
 	 */
 	public HashMap<String, String> matcher(String ip, String syslog) {
-		if (Assert.isEmptyString(syslog) == true) {
+		if (Assert.isEmptyString(syslog) == true||Assert.isEmptyString(ip) == true) {
+			theLogger.warn("the syslog or the ip address is empty");
 			return null;
 		}
 		
 		JSONObject standardRuleObj = findRegexs(ip);
 		if (standardRuleObj == null) {
+			theLogger.warn("noStandardRule",ip);
 			return null;
 		}
 		try {
 			JSONObject regexs = standardRuleObj.getJSONObject("regexs");
 			if (regexs == null) {
+				theLogger.warn("noStandardRule",ip);
 				return null;
 			}
 			String[] properties = JSONObject.getNames(regexs);
 			if(properties==null){
+				theLogger.warn("noStandardRule",ip);
 				return null;
 			}
 			HashMap<String, String> result = new HashMap<String, String>();
@@ -240,13 +250,15 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 			int flag = 0;
 			for (int i = 0; i < properties.length; i++) {
 				String property = properties[i];
-				if(property==null||"".equals(property))
+				if(Assert.isEmptyString(property) == true)
 				{
+					theLogger.warn("noStandardRule",ip);
 					return null;
 				}
 				String regex = regexs.getString(property);
-				if(regex==null||"".equals(regex))
+				if(Assert.isEmptyString(regex) == true)
 				{
+					theLogger.warn("noStandardRule",ip);
 					return null;
 				}
 				Pattern pattern = Pattern.compile(regex);
@@ -259,13 +271,14 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 				}
 
 			}
-
 			if (flag == 0) {
-				theLogger.info("all of regular expressions is not matcher the syslog,format failed");
+				theLogger.info("formatFail",ip);
+				return null;
 			}
+			theLogger.debug("the number of successfully formatted syslog,number="+flag);
 			return result;
 		} catch (Exception e) {
-			e.printStackTrace();
+			theLogger.exception(e);
 		}
 		return null;
 
