@@ -145,7 +145,7 @@ public class SNMPCollectAdapter {
 	private HashMap<String, String> snmpV3(Address targetAddress,
 			List<String> mibList, String userName, String auth,
 			String authPass, String priv, String privPass) {
-		HashMap<String, String> resultMap = new HashMap<String, String>();
+		HashMap<String, String> resultMap = null;
 		OID authID = AuthMD5.ID;
 		OID privID = PrivDES.ID;
 		int securityLevel = SecurityLevel.AUTH_PRIV;
@@ -212,33 +212,42 @@ public class SNMPCollectAdapter {
 			if (respEvt != null && respEvt.getResponse() != null) {
 				Vector<VariableBinding> recVBs = (Vector<VariableBinding>) respEvt.getResponse().getVariableBindings();
 				if (recVBs != null) {
-					for (int i = 0; i < recVBs.size(); i++) {
-						VariableBinding recVB = recVBs.elementAt(i);
-						if (recVB != null && recVB.getVariable() != null
-								&& recVB.getOid() != null) {
-							String OIDKey = recVB.getOid().toString();
-							String OIDValue = recVB.getVariable().toString();
-							if ("null".equalsIgnoreCase(OIDValue)
-									|| "nosuchobject"
-											.equalsIgnoreCase(OIDValue)
-									|| "nosuchinstance"
-											.equalsIgnoreCase(OIDValue)) {
-								resultMap.put(recVB.getOid().toString(),
-										"nosuchobject");
-								_flag = true;
-							} else if ("1.3.6.1.6.3.15.1.1.3.0".equals(OIDKey)
-									|| "1.3.6.1.6.3.15.1.1.5.0".equals(OIDKey)) {
-								_flag = false;
-							} else {
-								resultMap.put(OIDKey, OIDValue);
-								_flag = true;
-							}
+					if(recVBs.size()==mibList.size()){
+						resultMap=new HashMap<String, String>();
+						for (int i = 0; i < recVBs.size(); i++) {
+							VariableBinding recVB = recVBs.elementAt(i);
+							if (recVB != null && recVB.getVariable() != null
+									&& recVB.getOid() != null) {
+								String OIDKey = recVB.getOid().toString();
+								String OIDValue = recVB.getVariable().toString();
+								if(mibList.indexOf(OIDKey)==-1)
+								{
+									_flag=false;
+									break;
+								}
+								if ("null".equalsIgnoreCase(OIDValue)
+										|| "nosuchobject"
+										.equalsIgnoreCase(OIDValue)
+										|| "nosuchinstance"
+										.equalsIgnoreCase(OIDValue)) {
+									resultMap.put(recVB.getOid().toString(),
+											"nosuchobject");
+									_flag = true;
+								} else if ("1.3.6.1.6.3.15.1.1.3.0".equals(OIDKey)
+										|| "1.3.6.1.6.3.15.1.1.5.0".equals(OIDKey)||"1.3.6.1.6.3.15.1.1.1.0".equals(OIDKey)) {
+									_flag = false;
+								} else {
+									resultMap.put(OIDKey, OIDValue);
+									_flag = true;
+								}
 
+							}
 						}
 					}
 				}
 			}
 			if (_flag == false) {
+				resultMap=new HashMap<String, String>();
 				for (int i = 0; i < mibList.size(); i++) {
 					resultMap.put(mibList.get(i), "timeout");
 				}
@@ -290,7 +299,6 @@ public class SNMPCollectAdapter {
 			target.setRetries(_retries);
 			// set the timeout
 			target.setTimeout(_timeout);
-			System.out.println(target.getRetries()+"sssssssss"+target.getTimeout());
 			target.setVersion(SnmpConstants.version2c);
 			PDU pdu = new PDU();
 			for (int i = 0; i < mibList.size(); i++) {

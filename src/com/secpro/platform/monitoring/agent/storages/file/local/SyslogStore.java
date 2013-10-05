@@ -112,13 +112,13 @@ public class SyslogStore {
 							String cdate = syslog.getString("cdate");
 							checkAction=_metricStandardService.findCheckAction(ip);
 							if(checkAction==null){
-								checkAction="drop";
+								checkAction="0";
 							}
 							checkNumber=_metricStandardService.findCheckNum(ip);
 							Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 							//如果解析出来的数据小于2个将不上传服务器，直接丢弃（一般都会有时间和类型）
 							//调试阶段暂时设置为0，后续调整为配置方式
-							if(syslogMap!=null&&checkAction.equals("drop")){
+							if(syslogMap!=null&&checkAction.equals("0")){
 								if(checkNumber==-1&&syslogMap.size()>0){
 									JSONObject syslogFormt = new JSONObject();
 									JSONObject sys=new JSONObject();
@@ -149,7 +149,7 @@ public class SyslogStore {
 									}
 									_metricUploadService.addUploadMetric(syslogFormt);
 								}
-							}else if(syslogMap!=null&&checkAction.equals("upload")){
+							}else if(syslogMap!=null&&checkAction.equals("1")){
 								if(checkNumber==-1){
 									JSONObject syslogFormt = new JSONObject();
 									JSONObject sys=new JSONObject();
@@ -222,13 +222,13 @@ public class SyslogStore {
 						String cdate = syslog.getString("cdate");
 						checkAction=_metricStandardService.findCheckAction(ip);
 						if(checkAction==null){
-							checkAction="drop";
+							checkAction="0";
 						}
 						checkNumber=_metricStandardService.findCheckNum(ip);
 						Map<String, String> syslogMap = _metricStandardService.matcher(ip, msg);
 						//如果解析出来的数据小于2个将不上传服务器，直接丢弃（一般都会有时间和类型）
 						//调试阶段暂时设置为0，后续调整为配置方式
-						if(syslogMap!=null&&checkAction.equals("drop")){
+						if(syslogMap!=null&&checkAction.equals("0")){
 							if(checkNumber==-1&&syslogMap.size()>0){
 								JSONObject syslogFormt = new JSONObject();
 								JSONObject sys=new JSONObject();
@@ -259,7 +259,7 @@ public class SyslogStore {
 								}
 								_metricUploadService.addUploadMetric(syslogFormt);
 							}
-						}else if(syslogMap!=null&&checkAction.equals("upload")){
+						}else if(syslogMap!=null&&checkAction.equals("1")){
 							if(checkNumber==-1){
 								JSONObject syslogFormt = new JSONObject();
 								JSONObject sys=new JSONObject();

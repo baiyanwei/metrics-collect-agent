@@ -1,7 +1,8 @@
 package com.secpro.platform.monitoring.agent.operations.snmp;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.json.JSONObject;
 
@@ -49,8 +50,7 @@ public class SNMPOperation extends MonitorOperation {
 			if (Assert.isEmptyString(mibs) == true) {
 				throw new PlatformException("invalid mibs in SNMP operation.");
 			}
-			String[] mibArray = mibs.split(",");
-			//
+			
 			String username = metaMap.get("username");
 			String auth = metaMap.get("auth");
 			String authPass = metaMap.get("authPass");
@@ -69,7 +69,7 @@ public class SNMPOperation extends MonitorOperation {
 				referentBean.setPrivPass(privPass);
 			}
 			//
-			referentBean.setMibList(Arrays.asList(mibArray));
+			referentBean.setMibList(getSNMPMibList(mibs));
 			HashMap<String, String> metricMap = collectSNMP(referentBean);
 			/*
 			 * "ssh": '{' "mid": "{0}", "t": "{1}", "ip": "{2}", "s":
@@ -122,5 +122,27 @@ public class SNMPOperation extends MonitorOperation {
 	private HashMap<String, String> collectSNMP(SNMPReferentBean referentBean) {
 		this._SNMPCollectAdapter = new SNMPCollectAdapter();
 		return this._SNMPCollectAdapter.snmpAllVer(referentBean);
+	}
+	private List<String> getSNMPMibList(String mibs) throws PlatformException{
+		String[] mibArray = mibs.split(",");
+		List<String> mibList=new ArrayList<String>();
+		for(int i=0;i<mibArray.length;i++)
+		{
+			if(Assert.isEmptyString(mibArray[i])==true)
+			{
+				continue;
+			}
+			String matchRegex="[\\.0-9]+";
+			if(mibArray[i].matches(matchRegex)==false)
+			{
+				throw new PlatformException("the format of mib oid is incorrect");
+			}
+			if(mibArray[i].trim().startsWith("."))
+			{
+				mibArray[i]=mibArray[i].trim().substring(1, mibArray[i].length());
+			}
+			mibList.add(mibArray[i]);
+		}
+		return mibList;
 	}
 }
