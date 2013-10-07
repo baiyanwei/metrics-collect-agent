@@ -92,6 +92,29 @@ public class MonitoringEncryptService implements IService {
 			theLogger.exception(e);
 		}
 	}
+	/**
+	 * 获取密钥池中的一个密钥对
+	 * @return HashMap<String,String>:键值对"publickey":"value","privatekey":"value"
+	 */
+	public HashMap<String,String> getKeyPair(){
+		synchronized(_encryptKeyPool){
+			if(_encryptKeyPool.size()<=0)
+			{
+				return null;
+			}
+			Object[] keyObjs=_encryptKeyPool.get(0);
+			if(keyObjs.length<2)
+			{
+				return null;
+			}
+			HashMap<String,String> keyPair=new HashMap<String,String>();
+			if(keyObjs[0].getClass().equals(String.class)&&keyObjs[1].getClass().equals(String.class)){
+			keyPair.put("publickey", (String)keyObjs[0]);
+			keyPair.put("privatekey", (String)keyObjs[1]);
+			}
+			return keyPair;
+		}
+	}
 
 	/**
 	 * build a new encrypt key into poll and according to KEY_PASS_LIMIT set
@@ -261,11 +284,12 @@ public class MonitoringEncryptService implements IService {
 
 	/**
 	 * BASE64解密
-	 * 
+	 * 将string类型密文转换为byte[]数组类型密文
+	 * 将取到的任务队列中的加密块string类型，转换为byte[]类型，在进行RSA解密
 	 * @param base64
 	 * @return
 	 */
-	private byte[] decryptBASE64(String base64) {
+	public byte[] decryptBASE64(String base64) {
 		return Base64.decode(base64.getBytes());
 	}
 

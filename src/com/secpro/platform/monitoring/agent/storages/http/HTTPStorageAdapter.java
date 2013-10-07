@@ -37,10 +37,12 @@ import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.services.ServiceInfo;
+import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.core.utils.Constants;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
 import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
+import com.secpro.platform.monitoring.agent.services.MonitoringEncryptService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.storages.IDataStorage;
@@ -200,7 +202,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 
 			//
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			appendRequestHeaderParameters(requestHeadParaMap, 0);
+			appendRequestHeaderParameters(requestHeadParaMap, 0,"");
 			config._parameterMap = requestHeadParaMap;
 			//
 			client.configure(config);
@@ -210,7 +212,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("uploadRawData",e);
-			if (e.getMessage().equals(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
+			if (e.getMessage().contains(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
 				//write the sample body into file when connect to server in exception.
 				new Thread("HTTPStorageAdapter.uploadRawData.storeSampleDateToFile") {
 					// when upload sample data is in disconnection. We should handle
@@ -243,6 +245,24 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		if (workflows == null || workflows.isEmpty()) {
 			return;
 		}
+		//获得加密服务
+		MonitoringEncryptService encryptService=ServiceHelper.findService(MonitoringEncryptService.class);
+		if(encryptService==null)
+		{
+			return;
+		}
+		HashMap<String,String> keyPair=encryptService.getKeyPair();
+		if(keyPair==null||keyPair.size()==0)
+		{
+			return;
+		}
+		//获得公钥私钥
+		String publicKey=keyPair.get(InterfaceParameter.PUBLIC_KEY);
+		String privateKey=keyPair.get(InterfaceParameter.PRIVATE_KEY);
+		if(Assert.isEmptyString(publicKey)==true||Assert.isEmptyString(privateKey)==true)
+		{
+			return;
+		}
 		final TaskProcessingAction taskAction = new TaskProcessingAction(workflows);
 		try {
 			if (_monitoringService == null) {
@@ -250,7 +270,8 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			}
 			// This is the parameters of the Fetch message
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			appendRequestHeaderParameters(requestHeadParaMap, workflows.size());
+			//将公钥加入到HTTP协议头中
+			appendRequestHeaderParameters(requestHeadParaMap, workflows.size(),publicKey);
 			//
 			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._fetchTaskPath, HttpMethod.GET, FETCH_MESSAGE_BODY);
 			//
@@ -260,7 +281,8 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			config._endPointPort = this._hostPort.intValue();
 			config._synchronousConnection = false;
 			config._httpRequest = httpRequestV2;
-			config._responseListener = new FetchTaskListener(taskAction);
+			//将私钥传给取任务监听
+			config._responseListener = new FetchTaskListener(taskAction,privateKey);
 			config._parameterMap = requestHeadParaMap;
 			config._content = null;
 			//
@@ -272,7 +294,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchMessage", e);
-			if (_monitoringService._isFetchCacheTaskOnError == true && e.getMessage().equals(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
+			if (_monitoringService._isFetchCacheTaskOnError == true && e.getMessage().contains(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
 				_netwokDisconnectionErrorCounter++;
 				//adjust fetch action is OK or not, if not , then fetch a job from local cache.
 				if (_netwokDisconnectionErrorCounter >= 3) {
@@ -406,10 +428,11 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	 * @param requestHeadParaMap
 	 * @param workflows
 	 */
-	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount) {
+	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount,String publicKey) {
 		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringService.getNodeLocation());
 		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflowCount));
 		requestHeadParaMap.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
+		requestHeadParaMap.put(InterfaceParameter.PUBLIC_KEY, publicKey);
 	}
 
 	/**

@@ -2,6 +2,8 @@ package com.secpro.platform.monitoring.agent.storages.http;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import com.secpro.platform.api.client.IClientResponseListener;
 import com.secpro.platform.core.exception.PlatformException;
@@ -9,7 +11,9 @@ import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
+import com.secpro.platform.monitoring.agent.services.MonitoringEncryptService;
 import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
+import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 
 /**
  * @author baiyanwei Jul 13, 2013
@@ -28,15 +32,17 @@ public class FetchTaskListener implements IClientResponseListener {
 	public TaskProcessingAction _taskProcessingAction = null;
 	// 0 false 1 true
 	// private byte _isHasResponse = 0;
-
+	
 	private String _listenerID = "FetchTaskListener";
 
 	private String _listenerName = "FetchTaskListener";
 
 	private String _listenerDescription = null;
+	private String _privateKey="";
 
-	public FetchTaskListener(TaskProcessingAction action) {
+	public FetchTaskListener(TaskProcessingAction action,String privateKey) {
 		this._taskProcessingAction = action;
+		this._privateKey=privateKey;
 	}
 
 	private void recycleWorkflows() {
@@ -95,10 +101,11 @@ public class FetchTaskListener implements IClientResponseListener {
 				if (contents != null && contents.trim().length() > 0) {
 					new Thread("DPUStorageListener.taskProcessingAction.processTasks") {
 						public void run() {
+							String decodeContents=decodeContents(contents);
 							// execute job
-							processTasks(contents);
+							processTasks(decodeContents);
 							// put job into local task cache.
-							putJobIntoLocalCache(contents);
+							putJobIntoLocalCache(decodeContents);
 						}
 					}.start();
 					return;
@@ -158,5 +165,61 @@ public class FetchTaskListener implements IClientResponseListener {
 		} catch (JSONException e) {
 			theLogger.exception(e);
 		}
+	}
+	/**
+	 * 当接收到任务队列后，对任务队列中加密块（secret）进行解密
+	 * @param contents
+	 * @return
+	 */
+	private String decodeContents(String contents)
+	{
+		
+		theLogger.debug("decodeContents", contents);
+
+		if (contents == null || contents.trim().length() <= 0) {
+			return contents;
+		}
+		JSONArray decodeTaskJsons=null;
+		JSONTokener parser = new JSONTokener(contents);
+		try {
+			JSONArray taskJsons = new JSONArray(parser);
+			decodeTaskJsons=new JSONArray();
+			for (int i = 0; i < taskJsons.length(); i++) {
+				JSONObject taskObject = taskJsons.getJSONObject(i);
+				if(taskObject!=null&&taskObject.has(MonitoringTask.TASK_META_DATA_NAME))
+				{
+					JSONObject metaJsonObj=taskObject.getJSONObject(MonitoringTask.TASK_META_DATA_NAME);
+					if(metaJsonObj!=null&&metaJsonObj.has("secret")&&Assert.isEmptyString(_privateKey)==false)
+					{
+						String secret=metaJsonObj.getString("secret");
+						metaJsonObj.remove("secret");
+						MonitoringEncryptService encryptService=ServiceHelper.findService(MonitoringEncryptService.class);
+						if(Assert.isEmptyString(secret)==false&&encryptService!=null)
+						{
+							byte[] decodeData=encryptService.decryptByPrivateKey(encryptService.decryptBASE64(secret), _privateKey);
+							if(decodeData!=null&&decodeData.length>0){
+							JSONTokener secretParser=new JSONTokener(new String(decodeData));
+							JSONObject secretJsonObj=new JSONObject(secretParser);
+							String[] names=JSONObject.getNames(secretJsonObj);
+							if(names!=null&&names.length>0)
+							{
+								for(int j=0;j<names.length;j++)
+								{
+									metaJsonObj.put(names[j], secretJsonObj.getString(names[j]));
+									
+								}
+							}
+							}
+						}
+					}
+				}
+				decodeTaskJsons.put(taskObject);
+			}
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return decodeTaskJsons.toString();
 	}
 }
