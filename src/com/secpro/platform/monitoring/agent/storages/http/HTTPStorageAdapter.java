@@ -29,6 +29,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.secpro.platform.api.client.ClientConfiguration;
@@ -303,6 +304,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 						new Thread("HTTPStorageAdapter.executeFetchMessage.ProcessCacheTasks") {
 							public void run() {
 								taskAction.processTasks(cacheTaskObj);
+								putJobIntoLocalCache(cacheTaskObj);
 							}
 						}.start();
 						return;
@@ -450,5 +452,26 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		taskArray.put(taskObj);
 		theLogger.debug("runJobFromLocalCache", taskObj.toString());
 		return taskArray.toString();
+	}
+	
+	private void putJobIntoLocalCache(String jobsString){
+		if (Assert.isEmptyString(jobsString) == true) {
+			return;
+		}
+		MonitoringTaskCacheService taskCache = ServiceHelper.findService(MonitoringTaskCacheService.class);
+		try {
+			// JSONTokener parser = new JSONTokener(content);
+
+			JSONArray taskJsons = new JSONArray(jobsString);
+			if (taskJsons == null || taskJsons.length() == 0) {
+				return;
+			}
+			for (int i = 0; i < taskJsons.length(); i++) {
+				taskCache.addTaskIntoCache(taskJsons.getJSONObject(i));
+			}
+			theLogger.debug("putJobIntoLocalCache", jobsString);
+		} catch (JSONException e) {
+			theLogger.exception(e);
+		}
 	}
 }
