@@ -154,7 +154,6 @@ public class TelnetOperation extends MonitorOperation {
 	@Override
 	public void start() throws PlatformException {
 		// TODO Auto-generated method stub
-		System.out.println(">>>>>>>>>>>");
 	}
 
 	@Override

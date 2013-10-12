@@ -29,7 +29,7 @@ public class MonitoringEncryptService implements IService {
 	//
 	// Logging Object
 	//
-	private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringEncryptService.class);
+	final private static PlatformLogger theLogger = PlatformLogger.getLogger(MonitoringEncryptService.class);
 	private final String KEY_ALGORITHM = "RSA";
 	private final String SIGNATURE_ALGORITHM = "MD5withRSA";
 	private final String ENCODE_STR_KEY = "zxcvbnm,./asdfghjkl;'qwertyuiop[]\\1234567890-=` ZXCVBNM<>?:LKJHGFDSAQWERTYUIOP{}|+_)(*&^%$#@!~";
@@ -44,7 +44,7 @@ public class MonitoringEncryptService implements IService {
 	private HashMap<String, String> _encryptKeyMap = new HashMap<String, String>();
 	private ArrayList<Object[]> _encryptKeyPool = new ArrayList<Object[]>();
 	private Thread _encryptKeyThread = null;
-	private boolean __encryptKeyThreadRunnable = true;
+	private boolean _encryptKeyThreadRunnable = true;
 
 	@Override
 	public void start() throws Exception {
@@ -58,7 +58,7 @@ public class MonitoringEncryptService implements IService {
 		//
 		_encryptKeyThread = new Thread("MonitoringEncryptService._encryptKeyThread") {
 			public void run() {
-				while (__encryptKeyThreadRunnable) {
+				while (_encryptKeyThreadRunnable) {
 					try {
 						sleep(KEY_PASS_LIMIT);
 						clearPassEncryptKey();
@@ -70,7 +70,7 @@ public class MonitoringEncryptService implements IService {
 			}
 		};
 		_encryptKeyThread.start();
-		
+
 		//
 		buildEncryptKey();
 		//
@@ -85,34 +85,30 @@ public class MonitoringEncryptService implements IService {
 			this._encryptKeyPool.clear();
 		}
 		// stop the Thread.
-		__encryptKeyThreadRunnable = false;
+		_encryptKeyThreadRunnable = false;
 		try {
 			_encryptKeyThread.stop();
 		} catch (Exception e) {
 			theLogger.exception(e);
 		}
 	}
+
 	/**
 	 * 获取密钥池中的一个密钥对
-	 * @return HashMap<String,String>:键值对"publickey":"value","privatekey":"value"
+	 * 
+	 * @return 
+	 *         HashMap<String,String>:键值对"publickey":"value","privatekey":"value"
 	 */
-	public HashMap<String,String> getKeyPair(){
-		synchronized(_encryptKeyPool){
-			if(_encryptKeyPool.size()<=0)
-			{
+	public String[] getKeyPair() {
+		synchronized (_encryptKeyPool) {
+			if (_encryptKeyPool.size() <= 0) {
 				return null;
 			}
-			Object[] keyObjs=_encryptKeyPool.get(0);
-			if(keyObjs.length<2)
-			{
+			Object[] keyObjs = _encryptKeyPool.get(0);
+			if (keyObjs.length < 2) {
 				return null;
 			}
-			HashMap<String,String> keyPair=new HashMap<String,String>();
-			if(keyObjs[0].getClass().equals(String.class)&&keyObjs[1].getClass().equals(String.class)){
-			keyPair.put("publickey", (String)keyObjs[0]);
-			keyPair.put("privatekey", (String)keyObjs[1]);
-			}
-			return keyPair;
+			return new String[] { String.valueOf(keyObjs[0]), String.valueOf(keyObjs[1]) };
 		}
 	}
 
@@ -181,7 +177,7 @@ public class MonitoringEncryptService implements IService {
 		if (Assert.isEmptyString(strTask)) {
 			return "";
 		}
-		//String strEncode = "";
+		// String strEncode = "";
 		String des = "";
 		// String strKey =
 		// "zxcvbnm,./asdfghjkl;'qwertyuiop[]\\1234567890-=` ZXCVBNM<>?:LKJHGFDSAQWERTYUIOP{}|+_)(*&^%$#@!~";
@@ -206,7 +202,7 @@ public class MonitoringEncryptService implements IService {
 			temp = ENCODE_STR_KEY.charAt(code ^ strTask.charAt(n));
 			des = des + code + temp;
 		}
-		//strEncode = des;
+		// strEncode = des;
 		return des;
 	}
 
@@ -283,9 +279,9 @@ public class MonitoringEncryptService implements IService {
 	}
 
 	/**
-	 * BASE64解密
-	 * 将string类型密文转换为byte[]数组类型密文
+	 * BASE64解密 将string类型密文转换为byte[]数组类型密文
 	 * 将取到的任务队列中的加密块string类型，转换为byte[]类型，在进行RSA解密
+	 * 
 	 * @param base64
 	 * @return
 	 */

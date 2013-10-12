@@ -1,8 +1,10 @@
-package com.secpro.platform.monitoring.agent.storages.http;
+package com.secpro.platform.monitoring.agent.test.fetch;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
@@ -15,6 +17,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -43,6 +47,8 @@ import com.secpro.platform.monitoring.agent.services.MonitoringEncryptService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
 import com.secpro.platform.monitoring.agent.storages.IDataStorage;
+import com.secpro.platform.monitoring.agent.storages.http.FetchTaskListener;
+import com.secpro.platform.monitoring.agent.storages.http.PushDataSampleListener;
 import com.secpro.platform.monitoring.agent.utils.file.FileSystemStorageUtil;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
@@ -56,12 +62,24 @@ import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 public class HTTPStorageAdapter implements IService, IDataStorage {
 
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(HTTPStorageAdapter.class);
+	@XmlElement(name = "hostName")
+	public String _hostName = "";
 
-	@XmlElement(name = "fetchTaskClient", type = ClientConfiguration.class)
-	public ClientConfiguration _fetchTaskClient = new ClientConfiguration();
-	//
-	@XmlElement(name = "pushSampleClient", type = ClientConfiguration.class)
-	public ClientConfiguration _pushSampleClient = new ClientConfiguration();
+	@XmlElement(name = "hostPort", type = Long.class, defaultValue = "80")
+	public Long _hostPort = new Long(80);
+
+	// this is the path for the task to be fetched to.
+	@XmlElement(name = "fetchTaskPath", defaultValue = "/samples/fetch")
+	public String _fetchTaskPath = "";
+
+	@XmlElement(name = "pushSamplePath", defaultValue = "/samples/push")
+	public String _pushSamplePath = "";
+
+	@XmlElement(name = "userName", defaultValue = "mca")
+	public String _username = "";
+
+	@XmlElement(name = "passWord", defaultValue = "123456")
+	public String _password = "";
 
 	final private static String FETCH_MESSAGE_BODY = "ok";
 
@@ -72,12 +90,10 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	@Override
 	public void start() throws PlatformException {
 		_monitoringService = ServiceHelper.findService(MonitoringService.class);
-		theLogger.info("accessPathCheck", this._fetchTaskClient.toString(), this._pushSampleClient.toString());
 	}
 
 	@Override
 	public void stop() throws PlatformException {
-		_netwokDisconnectionErrorCounter = 0;
 	}
 
 	/**
@@ -93,20 +109,15 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	 */
 	public String createSignature(String contents, Map<String, String> requestHeaders, HttpMethod httpMethod, String hmacSha) throws NoSuchAlgorithmException, IOException,
 			Exception {
-		return null;
+
 		// create string to sign
-		// String contentMD5 =
-		// requestHeaders.get(HttpHeaders.Names.CONTENT_MD5);
-		// String contentType =
-		// requestHeaders.get(HttpHeaders.Names.CONTENT_TYPE);
-		// String stringToSign = httpMethod.toString() + "#" + (contentMD5 !=
-		// null ? contentMD5 : "") + "#" + (contentType != null ? contentType :
-		// "") + "#"
-		// + requestHeaders.get(HttpHeaders.Names.DATE) + "#" + this._username +
-		// "#";
-		//
-		// // return the signature
-		// return signWithHmacSha(stringToSign, hmacSha);
+		String contentMD5 = requestHeaders.get(HttpHeaders.Names.CONTENT_MD5);
+		String contentType = requestHeaders.get(HttpHeaders.Names.CONTENT_TYPE);
+		String stringToSign = httpMethod.toString() + "#" + (contentMD5 != null ? contentMD5 : "") + "#" + (contentType != null ? contentType : "") + "#"
+				+ requestHeaders.get(HttpHeaders.Names.DATE) + "#" + this._username + "#";
+
+		// return the signature
+		return signWithHmacSha(stringToSign, hmacSha);
 	}
 
 	/**
@@ -123,54 +134,47 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	 * @throws S3ServiceException
 	 */
 	protected String signWithHmacSha(String canonicalString, String hmacSha) throws Exception {
-		return null;
-		// if (this._password == null) {
-		// return null;
-		// }
+		if (this._password == null) {
+			return null;
+		}
+
+		// The following HMAC/SHA1 code for the signature is taken from the
+		// AWS Platform's implementation of RFC2104
+		// (amazon.webservices.common.Signature)
 		//
-		// // The following HMAC/SHA1 code for the signature is taken from the
-		// // AWS Platform's implementation of RFC2104
-		// // (amazon.webservices.common.Signature)
-		// //
-		// // Acquire an HMAC/SHA1 from the raw key bytes.
-		// SecretKeySpec signingKey = null;
-		// try {
-		// signingKey = new
-		// SecretKeySpec(this._password.getBytes(Constants.DEFAULT_ENCODING),
-		// Constants.HMAC_SHA256_ALGORITHM);
-		// } catch (UnsupportedEncodingException e) {
-		// throw e;
-		// }
-		//
-		// // Acquire the MAC instance and initialize with the signing key.
-		// Mac mac = null;
-		// try {
-		// mac = Mac.getInstance(hmacSha);
-		// } catch (NoSuchAlgorithmException e) {
-		// // should not happen
-		// throw new NoSuchAlgorithmException("Could not find sha1 algorithm",
-		// e);
-		// }
-		// try {
-		// mac.init(signingKey);
-		// } catch (InvalidKeyException e) {
-		// // also should not happen
-		// throw new
-		// InvalidKeyException("Could not initialize the MAC algorithm", e);
-		// }
-		//
-		// // Compute the HMAC on the digest, and set it.
-		// try {
-		// byte[] encrypted =
-		// mac.doFinal(canonicalString.getBytes(Constants.DEFAULT_ENCODING));
-		// ChannelBuffer channelBuffer =
-		// ChannelBuffers.buffer(encrypted.length);
-		// channelBuffer.writeBytes(encrypted);
-		// ChannelBuffer b64 = Base64.encode(channelBuffer);
-		// return b64.toString(Constants.DEFAULT_CHARSET);
-		// } catch (UnsupportedEncodingException e) {
-		// throw e;
-		// }
+		// Acquire an HMAC/SHA1 from the raw key bytes.
+		SecretKeySpec signingKey = null;
+		try {
+			signingKey = new SecretKeySpec(this._password.getBytes(Constants.DEFAULT_ENCODING), Constants.HMAC_SHA256_ALGORITHM);
+		} catch (UnsupportedEncodingException e) {
+			throw e;
+		}
+
+		// Acquire the MAC instance and initialize with the signing key.
+		Mac mac = null;
+		try {
+			mac = Mac.getInstance(hmacSha);
+		} catch (NoSuchAlgorithmException e) {
+			// should not happen
+			throw new NoSuchAlgorithmException("Could not find sha1 algorithm", e);
+		}
+		try {
+			mac.init(signingKey);
+		} catch (InvalidKeyException e) {
+			// also should not happen
+			throw new InvalidKeyException("Could not initialize the MAC algorithm", e);
+		}
+
+		// Compute the HMAC on the digest, and set it.
+		try {
+			byte[] encrypted = mac.doFinal(canonicalString.getBytes(Constants.DEFAULT_ENCODING));
+			ChannelBuffer channelBuffer = ChannelBuffers.buffer(encrypted.length);
+			channelBuffer.writeBytes(encrypted);
+			ChannelBuffer b64 = Base64.encode(channelBuffer);
+			return b64.toString(Constants.DEFAULT_CHARSET);
+		} catch (UnsupportedEncodingException e) {
+			throw e;
+		}
 	}
 
 	@Override
@@ -184,12 +188,12 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 				_monitoringService = ServiceHelper.findService(MonitoringService.class);
 			}
 			//
-			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSampleClient, HttpMethod.PUT, rawDataObj.toString());
+			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._pushSamplePath, HttpMethod.PUT, rawDataObj.toString());
 			//
 			HttpClient client = new HttpClient();
 			ClientConfiguration config = new ClientConfiguration();
-			config._endPointHost = this._pushSampleClient._endPointHost;
-			config._endPointPort = this._pushSampleClient._endPointPort;
+			config._endPointHost = this._hostName;
+			config._endPointPort = this._hostPort.intValue();
 			config._synchronousConnection = false;
 			config._httpRequest = httpRequestV2;
 			config._content = rawDataObj.toString();
@@ -201,7 +205,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 
 			//
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			appendRequestHeaderParameters(requestHeadParaMap, 0);
+			appendRequestHeaderParameters(requestHeadParaMap, 0,"");
 			config._parameterMap = requestHeadParaMap;
 			//
 			client.configure(config);
@@ -210,16 +214,13 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			//
 			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
-			theLogger.exception("uploadRawData", e);
+			theLogger.exception("uploadRawData",e);
 			if (e.getMessage().contains(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
-				// write the sample body into file when connect to server in
-				// exception.
+				//write the sample body into file when connect to server in exception.
 				new Thread("HTTPStorageAdapter.uploadRawData.storeSampleDateToFile") {
-					// when upload sample data is in disconnection. We should
-					// handle
+					// when upload sample data is in disconnection. We should handle
 					// this case on later.
-					// We should put sample data into local system. and upload
-					// it
+					// We should put sample data into local system. and upload it
 					// when connection is ready.
 					public void run() {
 						try {
@@ -244,7 +245,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 
 	@Override
 	public void executeFetchMessage(List<MonitoringWorkflow> workflows) {
-
+		
 		if (workflows == null || workflows.isEmpty()) {
 			return;
 		}
@@ -253,36 +254,41 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			if (_monitoringService == null) {
 				_monitoringService = ServiceHelper.findService(MonitoringService.class);
 			}
-			// 获得加密服务
-			MonitoringEncryptService encryptService = ServiceHelper.findService(MonitoringEncryptService.class);
-			if (encryptService == null) {
+			//获得加密服务
+			MonitoringEncryptService encryptService=ServiceHelper.findService(MonitoringEncryptService.class);
+			if(encryptService==null)
+			{
 				return;
 			}
-			// {public,private}
-			String[] keyPair = encryptService.getKeyPair();
-			if (keyPair == null) {
+			
+			String[] keyPair=encryptService.getKeyPair();
+			if(keyPair==null)
+			{
 				return;
 			}
-			if (Assert.isEmptyString(keyPair[0]) == true || Assert.isEmptyString(keyPair[1]) == true) {
+			//获得公钥私钥
+			String publicKey=keyPair[0];
+			String privateKey=keyPair[1];
+			
+			if(Assert.isEmptyString(publicKey)==true||Assert.isEmptyString(privateKey)==true)
+			{
 				return;
 			}
 			// This is the parameters of the Fetch message
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			// 将公钥加入到HTTP协议头中
-			requestHeadParaMap.put(InterfaceParameter.PUBLIC_KEY, keyPair[0]);
-
-			appendRequestHeaderParameters(requestHeadParaMap, workflows.size());
+			//将公钥加入到HTTP协议头中
+			appendRequestHeaderParameters(requestHeadParaMap, workflows.size(),publicKey);
 			//
-			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._fetchTaskClient, HttpMethod.GET, FETCH_MESSAGE_BODY);
+			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._fetchTaskPath, HttpMethod.GET, FETCH_MESSAGE_BODY);
 			//
 			HttpClient client = new HttpClient();
 			ClientConfiguration config = new ClientConfiguration();
-			config._endPointHost = this._fetchTaskClient._endPointHost;
-			config._endPointPort = this._fetchTaskClient._endPointPort;
+			config._endPointHost = this._hostName;
+			config._endPointPort = this._hostPort.intValue();
 			config._synchronousConnection = false;
 			config._httpRequest = httpRequestV2;
-			// 将私钥传给取任务监听
-			config._responseListener = new FetchTaskListener(taskAction, keyPair[0]);
+			//将私钥传给取任务监听
+			config._responseListener = new FetchTaskListener(taskAction,privateKey);
 			config._parameterMap = requestHeadParaMap;
 			config._content = null;
 			//
@@ -291,17 +297,16 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			client.start();
 			//
 			_netwokDisconnectionErrorCounter = 0;
-
+			
 			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchMessage", e);
 			if (_monitoringService._isFetchCacheTaskOnError == true && e.getMessage().contains(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
 				_netwokDisconnectionErrorCounter++;
-				// adjust fetch action is OK or not, if not , then fetch a job
-				// from local cache.
+				//adjust fetch action is OK or not, if not , then fetch a job from local cache.
 				if (_netwokDisconnectionErrorCounter >= 3) {
 					final String cacheTaskObj = getTaskFromLocalCache();
-
+					
 					if (cacheTaskObj != null) {
 						new Thread("HTTPStorageAdapter.executeFetchMessage.ProcessCacheTasks") {
 							public void run() {
@@ -313,13 +318,16 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 					}
 				}
 			}
-			for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
-				try {
-					iter.next().recycleForReady();
-				} catch (Exception loopException) {
-					continue;
+			synchronized(workflows){
+				for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
+					try {
+						iter.next().recycleForReady();
+					} catch (Exception loopException) {
+						continue;
+					}
 				}
 			}
+
 		}
 	}
 
@@ -327,7 +335,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	// PRIVATE METHODS
 	//
 
-	private DefaultHttpRequest createHttpMessage(ClientConfiguration targetClient, HttpMethod httpMethod, String content) throws NoSuchAlgorithmException, IOException, Exception {
+	private DefaultHttpRequest createHttpMessage(String accessPath, HttpMethod httpMethod, String content) throws NoSuchAlgorithmException, IOException, Exception {
 		if (content == null) {
 			content = "";
 		}
@@ -337,13 +345,14 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		// parametersBuilder.append("c=&l=&o=");
 		// create HTTP request with query parameter.
 
-		DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, httpMethod, targetClient._endPointPath);
+		DefaultHttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, httpMethod, accessPath);
 		// identify HTTP port we use
-		if (80 == targetClient._endPointPort) {
-			request.addHeader(HttpHeaders.Names.HOST, targetClient._endPointHost);
+		if (80 == this._hostPort.intValue()) {
+			request.addHeader(HttpHeaders.Names.HOST, this._hostName);
 		} else {
-			request.addHeader(HttpHeaders.Names.HOST, targetClient._endPointHost + ":" + targetClient._endPointPort);
+			request.addHeader(HttpHeaders.Names.HOST, this._hostName + ":" + this._hostPort);
 		}
+		theLogger.info(this._hostName + ":" + this._hostPort + accessPath);
 		TreeMap<String, String> requestHeaders = new TreeMap<String, String>(new Comparator<String>() {
 			public int compare(String string0, String string1) {
 				return string0.compareToIgnoreCase(string1);
@@ -359,14 +368,12 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		// message properly decoded.
 		requestHeaders.put(HttpHeaders.Names.CONTENT_ENCODING, Constants.DEFAULT_ENCODING);
 		// Create the security signature.
-		// String signature = this.createSignature(content, requestHeaders,
-		// httpMethod, Constants.HMAC_SHA1_ALGORITHM);
+		String signature = this.createSignature(content, requestHeaders, httpMethod, Constants.HMAC_SHA1_ALGORITHM);
 
 		// Add the security parameters
-		// request.addHeader("SignatureMethod", Constants.HMAC_SHA1_ALGORITHM);
-		// request.addHeader("SignatureVersion", "2");
-		// request.addHeader("Authorization", "AWS " + this._username + ":" +
-		// signature);
+		request.addHeader("SignatureMethod", Constants.HMAC_SHA1_ALGORITHM);
+		request.addHeader("SignatureVersion", "2");
+		request.addHeader("Authorization", "AWS " + this._username + ":" + signature);
 		// Add the customer headers to the request.
 		Iterator<String> iterator = requestHeaders.keySet().iterator();
 		while (iterator.hasNext() == true) {
@@ -432,10 +439,11 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	 * @param requestHeadParaMap
 	 * @param workflows
 	 */
-	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount) {
+	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount,String publicKey) {
 		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringService.getNodeLocation());
 		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflowCount));
 		requestHeadParaMap.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
+		requestHeadParaMap.put(InterfaceParameter.PUBLIC_KEY, publicKey);
 	}
 
 	/**
@@ -454,8 +462,8 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		theLogger.debug("runJobFromLocalCache", taskObj.toString());
 		return taskArray.toString();
 	}
-
-	private void putJobIntoLocalCache(String jobsString) {
+	
+	private void putJobIntoLocalCache(String jobsString){
 		if (Assert.isEmptyString(jobsString) == true) {
 			return;
 		}
