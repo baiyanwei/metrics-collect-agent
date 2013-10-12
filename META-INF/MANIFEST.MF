@@ -6,10 +6,10 @@ Bundle-Version: 1.0.0.qualifier
 Bundle-Activator: com.secpro.platform.monitoring.agent.Activator
 Bundle-Vendor: secpro
 Require-Bundle: org.eclipse.core.runtime,
- org.jboss.netty;bundle-version="3.4.2",
  com.secpro.platform.log;bundle-version="1.0.0",
  com.secpro.platform.core;bundle-version="1.0.0",
- com.secpro.platform.api;bundle-version="1.0.0"
+ com.secpro.platform.api;bundle-version="1.0.0",
+ org.jboss.netty;bundle-version="3.4.2"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: .

@@ -95,8 +95,8 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 			Date tomorrow = new Date(today.getYear(), today.getMonth(), today.getDate() + 1, 0, 0, 0);
 			_taskManageTimer = new Timer("MonitoringTaskCacheService._taskManageTimer");
 			// start on tomorrow 0:00
-			//_taskManageTimer.schedule(new CacheTaskManageAction(this), tomorrow.getTime() - today.getTime(), _taskTimerExecuteInterval);
-			_taskManageTimer.schedule(new CacheTaskManageAction(this), new Date(), _taskTimerExecuteInterval);
+			_taskManageTimer.schedule(new CacheTaskManageAction(this), tomorrow.getTime() - today.getTime(), _taskTimerExecuteInterval);
+			//_taskManageTimer.schedule(new CacheTaskManageAction(this), new Date(), _taskTimerExecuteInterval);
 		}
 		theLogger.info("startUp");
 		//
@@ -125,8 +125,8 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 				while (true) {
 					try {
 						// hourly
-					//	sleep(3600000L);
-						sleep(60000L);
+						sleep(3600000L);
+					//	sleep(60000L);
 						// synchronized cache task into file.
 						storeCacheTaskInFile();
 					} catch (Exception e) {
@@ -279,7 +279,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 		// 计算昨天此时的毫秒数
 		long yesterday = System.currentTimeMillis() - DAY_MSECONDS;
 		JSONObject temp = null;
-		// 间隔5分钟
+		// 间隔1分钟
 		long timeTemp = 60000;
 		// 遍历全部任务
 		Iterator<JSONObject> it = _taskCacheQueue.iterator();

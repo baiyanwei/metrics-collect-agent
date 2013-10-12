@@ -117,7 +117,7 @@ public class PushDataSampleListener implements IClientResponseListener {
 			theLogger.warn("fireError",messageObj.toString());
 			theLogger.exception(new Exception(messageObj.toString()));
 		}
-		if (Assert.isEmptyString(this._sampleData) == false) {
+		/*if (Assert.isEmptyString(this._sampleData) == false) {
 			new Thread("PushDataSampleListener.fireError.storeSampleDateToFile") {
 
 				// when upload sample data is in disconnection. We should handle
@@ -140,6 +140,6 @@ public class PushDataSampleListener implements IClientResponseListener {
 
 				}
 			}.start();
-		}
+		}*/
 	}
 }

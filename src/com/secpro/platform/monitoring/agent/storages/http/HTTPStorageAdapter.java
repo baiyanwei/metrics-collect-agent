@@ -243,6 +243,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 
 	@Override
 	public void executeFetchMessage(List<MonitoringWorkflow> workflows) {
+		
 		if (workflows == null || workflows.isEmpty()) {
 			return;
 		}
@@ -252,6 +253,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		{
 			return;
 		}
+		
 		HashMap<String,String> keyPair=encryptService.getKeyPair();
 		if(keyPair==null||keyPair.size()==0)
 		{
@@ -260,6 +262,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		//获得公钥私钥
 		String publicKey=keyPair.get(InterfaceParameter.PUBLIC_KEY);
 		String privateKey=keyPair.get(InterfaceParameter.PRIVATE_KEY);
+		
 		if(Assert.isEmptyString(publicKey)==true||Assert.isEmptyString(privateKey)==true)
 		{
 			return;
@@ -292,6 +295,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			client.start();
 			//
 			_netwokDisconnectionErrorCounter = 0;
+			
 			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchMessage", e);
@@ -300,6 +304,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 				//adjust fetch action is OK or not, if not , then fetch a job from local cache.
 				if (_netwokDisconnectionErrorCounter >= 3) {
 					final String cacheTaskObj = getTaskFromLocalCache();
+					
 					if (cacheTaskObj != null) {
 						new Thread("HTTPStorageAdapter.executeFetchMessage.ProcessCacheTasks") {
 							public void run() {
@@ -311,11 +316,13 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 					}
 				}
 			}
-			for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
-				try {
-					iter.next().recycleForReady();
-				} catch (Exception loopException) {
-					continue;
+			synchronized(workflows){
+				for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
+					try {
+						iter.next().recycleForReady();
+					} catch (Exception loopException) {
+						continue;
+					}
 				}
 			}
 
