@@ -282,7 +282,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			config._synchronousConnection = false;
 			config._httpRequest = httpRequestV2;
 			// 将私钥传给取任务监听
-			config._responseListener = new FetchTaskListener(taskAction, keyPair[0]);
+			config._responseListener = new FetchTaskListener(taskAction, keyPair[1]);
 			config._parameterMap = requestHeadParaMap;
 			config._content = null;
 			//

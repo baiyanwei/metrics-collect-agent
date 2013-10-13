@@ -97,7 +97,7 @@ public class MonitoringEncryptService implements IService {
 	 * 获取密钥池中的一个密钥对
 	 * 
 	 * @return 
-	 *         HashMap<String,String>:键值对"publickey":"value","privatekey":"value"
+	 *        
 	 */
 	public String[] getKeyPair() {
 		synchronized (_encryptKeyPool) {
