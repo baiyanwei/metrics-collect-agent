@@ -133,11 +133,11 @@ public class FetchTaskListener implements IClientResponseListener {
 		if (messageObj != null) {
 			theLogger.exception(new Exception(messageObj.toString()));
 		}
-		new Thread("DPUStorageListener.taskProcessingAction.recycle") {
-			public void run() {
-				recycleWorkflows();
-			}
-		}.start();
+//		new Thread("DPUStorageListener.taskProcessingAction.recycle") {
+//			public void run() {
+//				recycleWorkflows();
+//			}
+//		}.start();
 
 	}
 
