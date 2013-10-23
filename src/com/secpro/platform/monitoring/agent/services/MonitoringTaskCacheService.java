@@ -125,8 +125,8 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 				while (true) {
 					try {
 						// hourly
-						sleep(3600000L);
-					//	sleep(60000L);
+					//	sleep(3600000L);
+						sleep(60000L);
 						// synchronized cache task into file.
 						storeCacheTaskInFile();
 					} catch (Exception e) {
@@ -317,6 +317,10 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 			}
 			if(temp!=null){
 				_taskCacheQueue.remove(temp);
+				String mid=temp.getString("monitor_id");
+				if(mid!=null&&(!mid.endsWith("_c"))){
+					temp.put("monitor_id", mid+"_c");
+				}
 				Date now=new Date();
 				temp.put("create_at", now.getTime());
 				temp.put("timestamp", sdf.format(now));
