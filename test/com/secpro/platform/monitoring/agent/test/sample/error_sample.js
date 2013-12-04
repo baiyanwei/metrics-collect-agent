@@ -21,6 +21,8 @@
          "type": "operation"
       }
    },
+   "tip": "192.168.18.66",
+   "reg": "0311",
    "sid": "sid001",
    "ope": "ssh",
    "tid": "tid001",
@@ -37,6 +39,8 @@ body.error.entry 异常时执行的调度信息.
 body.error.code 异常代码
 body.error.type 异常类别,目前分为mca/operation 两种.
 
+tip 采集目标IP地址
+reg 任务签发区域 对应MSU_SCHEDULE.REGION/VARCHAR2(50) NOT NULL,
 tid 任务信息ID 对应MSU_SCHEDULE.TASK_ID/VARCHAR2(50) NOT NULL,
 sid 任务调度编号 对应MSU_SCHEDULE.SCHEDULE_ID/VARCHAR2(50) NOT NULL, 主键
 ope 任务操作 对应MSU_SCHEDULE.OPERATION/VARCHAR2(50) NOT NULL,

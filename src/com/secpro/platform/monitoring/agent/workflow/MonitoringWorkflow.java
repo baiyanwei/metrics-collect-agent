@@ -549,6 +549,8 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 		results.put("ea", String.valueOf(_executedAt.getTime()));
 		results.put("ec", String.valueOf(System.currentTimeMillis() - _executedAt.getTime()));
 		results.put("es", "1");
+		results.put(MonitoringTask.TASK_REGION_PROPERTY_NAME, _monitoringTask.getRegion());
+		results.put(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME, _monitoringTask.getTargetIP());
 		results.put(MonitoringTask.TASK_OPERATION_PROPERTY_NAME, _monitoringTask.getOperations());
 		results.put(MonitoringTask.TASK_SCHEDULE_ID_PROPERTY_NAME, _monitoringTask.getScheduleID());
 		results.put(MonitoringTask.TASK_ID_PROPERTY_NAME, _monitoringTask.getTaskID());
@@ -604,7 +606,8 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			MonitoringWorkflow._totalErrors++;
 			this.totalErrors++;
 			_monitoringService._lastError = "Task error :" + operationError._type + " - " + operationError._message;
-			//rawErrorString="error": '{'"type": "{0}","code": "{1}","message": "{2}","entry": {3}'}'
+			// rawErrorString="error": '{'"type": "{0}","code": "{1}","message":
+			// "{2}","entry": {3}'}'
 			// Need to create the error message.
 			String rawErrorData = MessagePreparer.format(getClass(), "rawErrorString", operationError._type, operationError._code, operationError._message, operationError._entry);
 

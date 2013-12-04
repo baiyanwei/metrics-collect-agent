@@ -5,6 +5,8 @@
          "c": ""
       }
    },
+   "tip": "192.168.18.66",
+   "reg": "0311"
    "sid": "sid001",
    "ope": "ssh",
    "tid": "tid001",
@@ -17,6 +19,8 @@ body中存放各采集结果,以OPERTION的名称为KEY.
 body.snmp.s 采集MIB
 body.snmp.c 采集结果
 
+tip 采集目标IP地址
+reg 任务签发区域 对应MSU_SCHEDULE.REGION/VARCHAR2(50) NOT NULL,
 tid 任务信息ID 对应MSU_SCHEDULE.TASK_ID/VARCHAR2(50) NOT NULL,
 sid 任务调度编号 对应MSU_SCHEDULE.SCHEDULE_ID/VARCHAR2(50) NOT NULL, 主键
 ope 任务操作 对应MSU_SCHEDULE.OPERATION/VARCHAR2(50) NOT NULL,

@@ -72,6 +72,9 @@ public class MonitoringTask {
 	public String getOperations() {
 		return getPropertyString(TASK_OPERATION_PROPERTY_NAME);
 	}
+	public String getRegion() {
+		return getPropertyString(TASK_REGION_PROPERTY_NAME);
+	}
 
 	public String getTaskCreatedTime() {
 		return getPropertyString(TASK_CREATED_AD_PROPERTY_NAME);
