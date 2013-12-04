@@ -5,7 +5,6 @@ import javax.xml.bind.annotation.XmlElement;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.secpro.platform.api.server.IHttpRequestHandler;
-import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.FetchSysLogStandardRuleAction;
@@ -109,17 +108,4 @@ public class SysLogStandardHttpRequstHandler implements IHttpRequestHandler {
 	public String toString() {
 		return theLogger.MessageFormat("toString", name, path);
 	}
-
-	@Override
-	public void fireSucceed(Object messageObj) throws PlatformException {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void fireError(Object messageObj) throws PlatformException {
-		// TODO Auto-generated method stub
-		
-	}
-
 }

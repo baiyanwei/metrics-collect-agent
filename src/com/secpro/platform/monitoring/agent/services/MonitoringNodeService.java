@@ -20,6 +20,7 @@ public class MonitoringNodeService extends AbstractMetricMBean implements IServi
 	//
 	@XmlElement(name = "jmxObjectName", defaultValue = "secpro.mca:type=MonitoringNodeService")
 	public String _jmxObjectName = "secpro.mca:type=MonitoringNodeService";
+	
 	@XmlElement(name = "nodeLocation", defaultValue = "HB")
 	public String _nodeLocation = "";
 

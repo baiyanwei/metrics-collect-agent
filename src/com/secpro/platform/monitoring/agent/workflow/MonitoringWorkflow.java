@@ -10,14 +10,13 @@ import java.util.List;
 import java.util.Queue;
 
 import javax.management.DynamicMBean;
-import javax.management.ObjectName;
 
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtension;
 import org.eclipse.core.runtime.IExtensionPoint;
 import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.RegistryFactory;
-import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.secpro.platform.core.configuration.GenericConfiguration;
@@ -67,7 +66,7 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 
 	private static HashMap<String, MessageFormat> _messageFormatters = new HashMap<String, MessageFormat>();
 	private static String[] _messageFiles = new String[] { "error.js", "error-scheduled.js", "ssh.js", "ssh-scheduled.js", "finished.js", "finished-scheduled.js", "snmp.js",
-			"snmp-scheduled.js","telnet.js","telnet-scheduled.js", "result.js", "result-scheduled.js" };
+			"snmp-scheduled.js", "telnet.js", "telnet-scheduled.js", "result.js", "result-scheduled.js" };
 
 	//
 	// We need to create the message formatters used in the workflow manager
@@ -362,8 +361,9 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			errOperation._code = _currentOperation.getErrorTypeAboutTimeout();
 			errOperation._exception = new PlatformException(PlatformExceptionMessage, null);
 			// for error entry.
-			errOperation._entry = "{}";
-			errOperation._screenshots = new ArrayList<String>();
+			if (_monitoringTask.getTaskObj() != null) {
+				errOperation._entry = _monitoringTask.getTaskObj().toString();
+			}
 			//
 			logErrorMessage(_currentOperation, errOperation, false);
 		} else {
@@ -533,13 +533,27 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 		} else {
 			messageFormatter = _messageFormatters.get(messageFile + "-scheduled");
 		}
-
+		// 字段名 / 类型 /在SAMPLE中的KEY名
+		// EXECUTE_AT/NUMBER(20) /ea
+		// EXECUTE_COST /NUMBER(20) /ec
+		// EXECUTE_STATUS/NUMBER(1)/es
+		// EXECUTE_DESCRIPTION/VARCHAR2(500)/通过对SAMPLE分析得出
+		// #4 SCHEDULE_ID 在SAMPLE中的KEY名为sid
+		// #5 存值说明:
+		// EXECUTE_AT根据SAMPLE中的值存入.
+		// EXECUTE_COST根据SAMPLE中的值存入.
+		// EXECUTE_STATUS 为任务执行状态 1正常,0异常.
+		// EXECUTE_DESCRIPTION为执行结果描述 ,任务正确采集为'success',
+		// 任务采集出错为,SAMPLE中报上来的异常内容或直接将整个SAMPLE存进去.
 		// TODO Monitoring System V1 HEADER
-		results.put(MonitoringTask.TASK_TIMESTAMP_PROPERTY_NAME, String.valueOf(_executedAt.getTime()));
-		results.put(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME, _monitoringTask.getMonitorID());
+		results.put("ea", String.valueOf(_executedAt.getTime()));
+		results.put("ec", String.valueOf(System.currentTimeMillis() - _executedAt.getTime()));
+		results.put("es", "1");
+		results.put(MonitoringTask.TASK_OPERATION_PROPERTY_NAME, _monitoringTask.getOperations());
+		results.put(MonitoringTask.TASK_SCHEDULE_ID_PROPERTY_NAME, _monitoringTask.getScheduleID());
+		results.put(MonitoringTask.TASK_ID_PROPERTY_NAME, _monitoringTask.getTaskID());
 		// Add the message specific information.
 		results.put("body", messageFormatter.format(objects));
-
 		return results;
 	}
 
@@ -590,13 +604,13 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 			MonitoringWorkflow._totalErrors++;
 			this.totalErrors++;
 			_monitoringService._lastError = "Task error :" + operationError._type + " - " + operationError._message;
-
+			//rawErrorString="error": '{'"type": "{0}","code": "{1}","message": "{2}","entry": {3}'}'
 			// Need to create the error message.
-			String rawErrorData = MessagePreparer.format(getClass(), "rawErrorString", operationError._type, operationError._code, operationError._message, operationError._entry,
-					new JSONArray(operationError._screenshots).toString());
+			String rawErrorData = MessagePreparer.format(getClass(), "rawErrorString", operationError._type, operationError._code, operationError._message, operationError._entry);
 
 			if (_isBundle == false) {
 				HashMap<String, String> messageInputAndRequestHeaders = getMessageInputAndRequestHeaders("error", rawErrorData);
+				messageInputAndRequestHeaders.put("es", "0");
 				storeResultsMessage("error", messageInputAndRequestHeaders);
 			} else {
 				_scheduledResultsData.put("error", rawErrorData);
@@ -732,7 +746,13 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 	 * @param messageInputAndRequestHeaders
 	 */
 	protected void storeResultsMessage(String type, HashMap<String, String> messageInputAndRequestHeaders) {
+		String body = messageInputAndRequestHeaders.remove("body");
 		final JSONObject messageObj = new JSONObject(messageInputAndRequestHeaders);
+		try {
+			messageObj.put("body", new JSONObject(body));
+		} catch (JSONException e1) {
+			theLogger.exception(e1);
+		}
 		new Thread() {
 			public void run() {
 				try {

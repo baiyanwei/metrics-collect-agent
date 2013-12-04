@@ -179,6 +179,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			throw new PlatformException("invalid upload sample data");
 		}
 		try {
+			//System.out.println("rawDataObj:"+rawDataObj);
 			theLogger.debug("readyForUpload", rawDataObj.toString());
 			if (_monitoringService == null) {
 				_monitoringService = ServiceHelper.findService(MonitoringService.class);
@@ -269,7 +270,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			// This is the parameters of the Fetch message
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
 			// 将公钥加入到HTTP协议头中
-			requestHeadParaMap.put(InterfaceParameter.PUBLIC_KEY, keyPair[0]);
+			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.PUBLIC_KEY, keyPair[0]);
 
 			appendRequestHeaderParameters(requestHeadParaMap, workflows.size());
 			//
@@ -433,9 +434,10 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	 * @param workflows
 	 */
 	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount) {
-		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringService.getNodeLocation());
-		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflowCount));
-		requestHeadParaMap.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.REGION, _monitoringService.getNodeLocation());
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.COUNTER, String.valueOf(workflowCount));
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.OPERATIONS, _monitoringService._operationCapabilities);
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.MCA_NAME, _monitoringService._mcaName);
 	}
 
 	/**

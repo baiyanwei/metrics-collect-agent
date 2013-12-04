@@ -205,7 +205,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 
 			//
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			appendRequestHeaderParameters(requestHeadParaMap, 0,"");
+			appendRequestHeaderParameters(requestHeadParaMap, 0, "");
 			config._parameterMap = requestHeadParaMap;
 			//
 			client.configure(config);
@@ -214,13 +214,16 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			//
 			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
-			theLogger.exception("uploadRawData",e);
+			theLogger.exception("uploadRawData", e);
 			if (e.getMessage().contains(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
-				//write the sample body into file when connect to server in exception.
+				// write the sample body into file when connect to server in
+				// exception.
 				new Thread("HTTPStorageAdapter.uploadRawData.storeSampleDateToFile") {
-					// when upload sample data is in disconnection. We should handle
+					// when upload sample data is in disconnection. We should
+					// handle
 					// this case on later.
-					// We should put sample data into local system. and upload it
+					// We should put sample data into local system. and upload
+					// it
 					// when connection is ready.
 					public void run() {
 						try {
@@ -245,7 +248,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 
 	@Override
 	public void executeFetchMessage(List<MonitoringWorkflow> workflows) {
-		
+
 		if (workflows == null || workflows.isEmpty()) {
 			return;
 		}
@@ -254,30 +257,27 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			if (_monitoringService == null) {
 				_monitoringService = ServiceHelper.findService(MonitoringService.class);
 			}
-			//获得加密服务
-			MonitoringEncryptService encryptService=ServiceHelper.findService(MonitoringEncryptService.class);
-			if(encryptService==null)
-			{
+			// 获得加密服务
+			MonitoringEncryptService encryptService = ServiceHelper.findService(MonitoringEncryptService.class);
+			if (encryptService == null) {
 				return;
 			}
-			
-			String[] keyPair=encryptService.getKeyPair();
-			if(keyPair==null)
-			{
+
+			String[] keyPair = encryptService.getKeyPair();
+			if (keyPair == null) {
 				return;
 			}
-			//获得公钥私钥
-			String publicKey=keyPair[0];
-			String privateKey=keyPair[1];
-			
-			if(Assert.isEmptyString(publicKey)==true||Assert.isEmptyString(privateKey)==true)
-			{
+			// 获得公钥私钥
+			String publicKey = keyPair[0];
+			String privateKey = keyPair[1];
+
+			if (Assert.isEmptyString(publicKey) == true || Assert.isEmptyString(privateKey) == true) {
 				return;
 			}
 			// This is the parameters of the Fetch message
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			//将公钥加入到HTTP协议头中
-			appendRequestHeaderParameters(requestHeadParaMap, workflows.size(),publicKey);
+			// 将公钥加入到HTTP协议头中
+			appendRequestHeaderParameters(requestHeadParaMap, workflows.size(), publicKey);
 			//
 			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._fetchTaskPath, HttpMethod.GET, FETCH_MESSAGE_BODY);
 			//
@@ -287,8 +287,8 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			config._endPointPort = this._hostPort.intValue();
 			config._synchronousConnection = false;
 			config._httpRequest = httpRequestV2;
-			//将私钥传给取任务监听
-			config._responseListener = new FetchTaskListener(taskAction,privateKey);
+			// 将私钥传给取任务监听
+			config._responseListener = new FetchTaskListener(taskAction, privateKey);
 			config._parameterMap = requestHeadParaMap;
 			config._content = null;
 			//
@@ -297,16 +297,17 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 			client.start();
 			//
 			_netwokDisconnectionErrorCounter = 0;
-			
+
 			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchMessage", e);
 			if (_monitoringService._isFetchCacheTaskOnError == true && e.getMessage().contains(HttpClient.NETWORK_ERROR_CONNECTION_REFUSED)) {
 				_netwokDisconnectionErrorCounter++;
-				//adjust fetch action is OK or not, if not , then fetch a job from local cache.
+				// adjust fetch action is OK or not, if not , then fetch a job
+				// from local cache.
 				if (_netwokDisconnectionErrorCounter >= 3) {
 					final String cacheTaskObj = getTaskFromLocalCache();
-					
+
 					if (cacheTaskObj != null) {
 						new Thread("HTTPStorageAdapter.executeFetchMessage.ProcessCacheTasks") {
 							public void run() {
@@ -318,7 +319,7 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 					}
 				}
 			}
-			synchronized(workflows){
+			synchronized (workflows) {
 				for (Iterator<MonitoringWorkflow> iter = workflows.iterator(); iter.hasNext();) {
 					try {
 						iter.next().recycleForReady();
@@ -439,11 +440,11 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 	 * @param requestHeadParaMap
 	 * @param workflows
 	 */
-	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount,String publicKey) {
-		requestHeadParaMap.put(InterfaceParameter.LOCATION, _monitoringService.getNodeLocation());
-		requestHeadParaMap.put(InterfaceParameter.COUNT, String.valueOf(workflowCount));
-		requestHeadParaMap.put(InterfaceParameter.OPERATIONS, _monitoringService._operationCapabilities);
-		requestHeadParaMap.put(InterfaceParameter.PUBLIC_KEY, publicKey);
+	private void appendRequestHeaderParameters(HashMap<String, String> requestHeadParaMap, int workflowCount, String publicKey) {
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.REGION, _monitoringService.getNodeLocation());
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.COUNTER, String.valueOf(workflowCount));
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.OPERATIONS, _monitoringService._operationCapabilities);
+		requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.PUBLIC_KEY, publicKey);
 	}
 
 	/**
@@ -462,8 +463,8 @@ public class HTTPStorageAdapter implements IService, IDataStorage {
 		theLogger.debug("runJobFromLocalCache", taskObj.toString());
 		return taskArray.toString();
 	}
-	
-	private void putJobIntoLocalCache(String jobsString){
+
+	private void putJobIntoLocalCache(String jobsString) {
 		if (Assert.isEmptyString(jobsString) == true) {
 			return;
 		}

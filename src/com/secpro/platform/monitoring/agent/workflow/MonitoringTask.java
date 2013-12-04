@@ -11,14 +11,22 @@ import org.json.JSONObject;
  *         Monitoring Task define
  */
 public class MonitoringTask {
-	// TODO Monitoring System task header parameter stander.
-	public static final String TASK_MONITOR_ID_PROPERTY_NAME = "monitor_id";
-	public static final String TASK_TIMESTAMP_PROPERTY_NAME = "timestamp";
-	public static final String TASK_CREATED_AD_PROPERTY_NAME = "create_at";
-	public static final String TASK_OPERATION_PROPERTY_NAME = "operation";
-	public static final String TASK_TARGET_IP_PROPERTY_NAME = "target_ip";
+	// '{'"tid":"{0}","sid": "{1}","reg": "{2}","ope":
+	// "{3}","cat":"{4}","sat":"{5}","tip":"{6}","tpt":"{7}","con":'{8}',"mda":'{9}''}'
+
+	public static final String TASK_ID_PROPERTY_NAME = "tid";
+	public static final String TASK_SCHEDULE_ID_PROPERTY_NAME = "sid";
+	public static final String TASK_REGION_PROPERTY_NAME = "reg";
+	public static final String TASK_OPERATION_PROPERTY_NAME = "ope";
+	public static final String TASK_CREATED_AD_PROPERTY_NAME = "cat";
+	public static final String TASK_SCHEDULE_POINT_PROPERTY_NAME = "sat";
+	public static final String TASK_TARGET_IP_PROPERTY_NAME = "tip";
+	public static final String TASK_TARGET_PORT_PROPERTY_NAME = "tpt";
+	public static final String TASK_CONTENT_PROPERTY_NAME = "con";
+	public static final String TASK_META_DATA_NAME = "mda";
+
 	//
-	public static final String TASK_META_DATA_NAME = "meta_data";
+
 	//
 	private JSONObject _taskObj = null;
 	private HashMap<String, String> _metaDataMap = null;
@@ -69,14 +77,26 @@ public class MonitoringTask {
 		return getPropertyString(TASK_CREATED_AD_PROPERTY_NAME);
 	}
 
-	public String getMonitorID() {
-		return getPropertyString(TASK_MONITOR_ID_PROPERTY_NAME);
+	public String getTaskID() {
+		return getPropertyString(TASK_ID_PROPERTY_NAME);
 	}
 
-	public String getTimestamp() {
-		return getPropertyString(TASK_TIMESTAMP_PROPERTY_NAME);
+	public String getScheduleID() {
+		return getPropertyString(TASK_SCHEDULE_ID_PROPERTY_NAME);
 	}
 
+	public String getScheduleTimestamp() {
+		return getPropertyString(TASK_SCHEDULE_POINT_PROPERTY_NAME);
+	}
+	public String getTargetIP() {
+		return getPropertyString(TASK_TARGET_IP_PROPERTY_NAME);
+	}
+	public String getTargetPort() {
+		return getPropertyString(TASK_TARGET_PORT_PROPERTY_NAME);
+	}
+	public String getContent() {
+		return getPropertyString(TASK_CONTENT_PROPERTY_NAME);
+	}
 	public boolean isBundle() {
 		return true;
 	}
@@ -86,7 +106,7 @@ public class MonitoringTask {
 	}
 
 	public String getTaskDescription() {
-		return getMonitorID() + "-" + getTaskCreatedTime() + "-" + getPropertyString(TASK_TARGET_IP_PROPERTY_NAME) + getPropertyString(TASK_OPERATION_PROPERTY_NAME);
+		return getTaskID() + "-" + getTaskCreatedTime() + "-" + getPropertyString(TASK_TARGET_IP_PROPERTY_NAME) + getPropertyString(TASK_OPERATION_PROPERTY_NAME);
 	}
 
 	/**

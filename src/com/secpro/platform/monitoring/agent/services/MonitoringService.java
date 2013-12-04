@@ -18,9 +18,11 @@ import com.secpro.platform.core.metrics.Metric;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.services.ServiceInfo;
+import com.secpro.platform.core.utils.Assert;
+import com.secpro.platform.core.utils.Utils;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.Activator;
-import com.secpro.platform.monitoring.agent.actions.FetchTSSTaskAction;
+import com.secpro.platform.monitoring.agent.actions.FetchMSUTaskAction;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
 
 /**
@@ -54,6 +56,8 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 	@XmlElement(name = "concurrentWorkflows", type = Long.class, defaultValue = "1")
 	public Long _concurrentWorkflows = new Long(1);
 
+	@XmlElement(name = "mcaName", defaultValue = "")
+	public String _mcaName = "";
 	/**
 	 * This is the number of workflows that need to be completed before we read
 	 * and process the tasks queues.
@@ -95,8 +99,11 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 
 		// load the Fetch task timer
 		_fetchTSSTaskTimer = new Timer("MonitoringService._fetchTSSTaskTimer");
-		_fetchTSSTaskTimer.schedule(new FetchTSSTaskAction(this), 20000L, _fetchTSSTaskInterval);
-
+		_fetchTSSTaskTimer.schedule(new FetchMSUTaskAction(this), 20000L, _fetchTSSTaskInterval);
+		//
+		if (Assert.isEmptyString(this._mcaName)) {
+			this._mcaName = "MCA-" + this._nodeLocation + "-" + Utils.getUUID32();
+		}
 		theLogger.info("startUp", _workflowThreshold.intValue(), _fetchTSSTaskInterval, _operationCapabilities);
 	}
 
@@ -190,17 +197,17 @@ public class MonitoringService extends AbstractMetricMBean implements IService, 
 			try {
 				workflow.start();
 				_monitoringWorkflows.add(workflow);
-				
+
 				try {
 					Calendar cal = Calendar.getInstance();
 					long currentTime = System.currentTimeMillis();
 					cal.setTimeInMillis(currentTime);
 
 					// Need to create a unique name for the object.
-					workflow._jmxObjectName  ="secpro.mca:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-"
+					workflow._jmxObjectName = "secpro.mca:type=MonitoringWorkflow" + String.valueOf(bartDateFormat.format(cal.getTime())) + "-"
 							+ String.valueOf(_monitoringWorkflows.size());
 					// register workflows as dynamic bean
-					this.registerMBean(workflow._jmxObjectName,workflow);
+					this.registerMBean(workflow._jmxObjectName, workflow);
 				} catch (Exception e) {
 					theLogger.exception("createMonitoringWorkflows", e);
 				}

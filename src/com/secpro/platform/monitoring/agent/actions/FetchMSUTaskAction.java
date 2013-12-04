@@ -14,16 +14,16 @@ import com.secpro.platform.monitoring.agent.workflow.MonitoringWorkflow;
  * 
  *         Fetch Server Task Action
  */
-public class FetchTSSTaskAction extends TimerTask {
+public class FetchMSUTaskAction extends TimerTask {
 	//
-	private static PlatformLogger theLogger = PlatformLogger.getLogger(FetchTSSTaskAction.class);
+	private static PlatformLogger theLogger = PlatformLogger.getLogger(FetchMSUTaskAction.class);
 	private static boolean isServiceReady = false;
 	//
 	private MonitoringService _monitoringService = null;
 
 	//
 
-	public FetchTSSTaskAction(MonitoringService monitoringService) {
+	public FetchMSUTaskAction(MonitoringService monitoringService) {
 		_monitoringService = monitoringService;
 	}
 

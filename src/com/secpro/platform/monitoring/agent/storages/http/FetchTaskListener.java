@@ -101,7 +101,9 @@ public class FetchTaskListener implements IClientResponseListener {
 				if (contents != null && contents.trim().length() > 0) {
 					new Thread("DPUStorageListener.taskProcessingAction.processTasks") {
 						public void run() {
-							String decodeContents=decodeContents(contents);
+							//String decodeContents=decodeContents(contents);
+							//test 
+							String decodeContents=contents;
 							// execute job
 							processTasks(decodeContents);
 							// put job into local task cache.

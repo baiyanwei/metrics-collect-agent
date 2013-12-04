@@ -28,7 +28,7 @@ import com.secpro.platform.core.utils.Constants;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
 import com.secpro.platform.monitoring.agent.services.MetricStandardService;
-import com.secpro.platform.monitoring.agent.services.MonitoringNodeService;
+import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.storages.http.FetchStandardRuleListener;
 
 /**
@@ -61,11 +61,13 @@ public class FetchSysLogStandardRuleAction extends Thread {
 
 	public void executeFetchStandardRule() {
 		try {
-			MonitoringNodeService monitoringNodeService = ServiceHelper.findService(MonitoringNodeService.class);
+			MonitoringService monitoringService = ServiceHelper.findService(MonitoringService.class);
 
 			// This is the parameters of the Fetch message
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
-			requestHeadParaMap.put(InterfaceParameter.LOCATION, monitoringNodeService._nodeLocation);
+			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.REGION, monitoringService.getNodeLocation());
+			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.MCA_NAME, monitoringService._mcaName);
+			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.SYSLOG_RULE_PUSH_URL, _metricStandardService._callbackPath);
 			//
 			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._metricStandardService._fetchStandardRulesPath, HttpMethod.GET, MetricStandardService.FETCH_MESSAGE_BODY);
 			//
@@ -83,7 +85,7 @@ public class FetchSysLogStandardRuleAction extends Thread {
 			//
 			client.start();
 			//
-			//StorageAdapterService.updateRquestCount();
+			// StorageAdapterService.updateRquestCount();
 		} catch (Exception e) {
 			theLogger.exception("executeFetchStandardRule", e);
 		}
@@ -135,7 +137,7 @@ public class FetchSysLogStandardRuleAction extends Thread {
 		return request;
 	}
 
-	public void analyzeStandardRuleOK(String content) throws Exception{
+	public void analyzeStandardRuleOK(String content) throws Exception {
 		if (Assert.isEmptyString(content) == true) {
 			return;
 		}
@@ -182,13 +184,9 @@ public class FetchSysLogStandardRuleAction extends Thread {
 	 */
 	private boolean checkForRuleFormat(JSONObject ruleObject) {
 		/*
-		{
-			ip string： 采集对象IP地址
-			regexs Map： syslog正则表达式规则库
-			checkNum int：syslog标准化后上发条件
-			checkAction String：syslog标准化后上传动作
-		}
-		*/
+		 * { ip string： 采集对象IP地址 regexs Map： syslog正则表达式规则库 checkNum
+		 * int：syslog标准化后上发条件 checkAction String：syslog标准化后上传动作 }
+		 */
 		if (ruleObject.has("ip") == false) {
 			theLogger.warn("errorRuleFormat", "ip");
 			return false;

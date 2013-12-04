@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.HashMap;
 
+
 import ch.ethz.ssh2.ChannelCondition;
 import ch.ethz.ssh2.Connection;
 import ch.ethz.ssh2.Session;
@@ -15,6 +16,7 @@ import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.operations.MonitorOperation;
+import com.secpro.platform.monitoring.agent.operations.OperationError;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 
 /**
@@ -51,42 +53,46 @@ public class SSHOperation extends MonitorOperation {
 			throw new PlatformException("invalid username in SSH operation.");
 		}
 		String password = metaMap.get("password");
-		if (Assert.isEmptyString(username) == true) {
+		if (Assert.isEmptyString(password) == true) {
 			throw new PlatformException("invalid password in SSH operation.");
 		}
-		String hostIp = metaMap.get("host_ip");
-		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invalid host_ip in SSH operation.");
+		String hostIp = task.getTargetIP();
+		if (Assert.isEmptyString(hostIp) == true) {
+			throw new PlatformException("invalid target_ip in SSH operation.");
 		}
-		String protStr = metaMap.get("port");
+		String protStr = task.getTargetPort();
 		if (Assert.isEmptyString(username) == true) {
 			throw new PlatformException("invalid port in SSH operation.");
 		}
 		int port = Integer.parseInt(protStr);
 		//
-		String shellCommands = metaMap.get("shell_command");
+		String shellCommands = task.getContent();
 		if (Assert.isEmptyString(username) == true) {
-			throw new PlatformException("invalid shell_command in SSH operation.");
+			throw new PlatformException("invalid content in SSH operation.");
 		}
-		//伪终端类型，不需要判断空
-		String terminalType=metaMap.get("terminal_type");
-		//SSH操作返回值所需的过滤字符串，不需要判断空
-		String filterString=metaMap.get("filter_string");
+		// 伪终端类型，不需要判断空
+		String terminalType = metaMap.get("terminal_type");
+		// SSH操作返回值所需的过滤字符串，不需要判断空
+		String filterString = metaMap.get("filter_string");
 		//
 
 		try {
-			
-			// "ssh": '{' "mid": "{0}", "t": "{1}", "ip": "{2}",
-			// "s":"{3}","c":"{4}"'}'
+
+			// "ssh":'{'"s":"{0}","c":"{1}"'}'
 			// package metric content.
 			_sshConnection = createSSHConnection(hostIp, username, password, port);
-			String metricContent =executeShellCommand(_sshConnection,shellCommands,terminalType,filterString);
-			HashMap<String, String> messageInputAndRequestHeaders = this._monitoringWorkflow.getMessageInputAndRequestHeaders(this._operationID, task.getMonitorID(),
-					task.getTimestamp(), task.getPropertyString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME), shellCommands, metricContent);
+			String metricContent = executeShellCommand(_sshConnection, shellCommands, terminalType, filterString);
+			HashMap<String, String> messageInputAndRequestHeaders = this._monitoringWorkflow.getMessageInputAndRequestHeaders(this._operationID, shellCommands, metricContent);
 			this._monitoringWorkflow.createResultsMessage(this._operationID, messageInputAndRequestHeaders);
 			this.fireCompletedSuccessfully();
 		} catch (Exception e) {
 			theLogger.exception(e);
+			this._operationError._type = OperationError.ErrorType.operation;
+			this._operationError._code = 0;
+			this._operationError._message = e.getMessage();
+			if (task.getTaskObj() != null) {
+				this._operationError._entry = task.getTaskObj().toString();
+			}
 			this._operationError._exception = new PlatformException(e.getMessage(), e);
 			this.fireError(this._operationError);
 			return;
@@ -101,7 +107,7 @@ public class SSHOperation extends MonitorOperation {
 			}
 		}
 		theLogger.debug("finishOperation", task.getTaskObj().toString(), String.valueOf(System.currentTimeMillis() - currentTimePoint));
-		
+
 	}
 
 	@Override
@@ -163,76 +169,68 @@ public class SSHOperation extends MonitorOperation {
 	 * @param command
 	 *            远程执行命令行代码
 	 */
-	private String executeShellCommand(Connection connection, String commands,String terminalType,String filterString) throws PlatformException {
+	private String executeShellCommand(Connection connection, String commands, String terminalType, String filterString) throws PlatformException {
 		if (connection == null) {
 			return null;
 		}
-		
+
 		Session sshSession = null;
 		BufferedReader bufferedReader = null;
-		String[] command=commands.split("\\^");
-		String terminalTypeDefault="bush";
-		if(Assert.isEmptyString(terminalType)==false)
-		{
-			terminalTypeDefault=terminalType;
+		String[] command = commands.split("\\^");
+		String terminalTypeDefault = "bush";
+		if (Assert.isEmptyString(terminalType) == false) {
+			terminalTypeDefault = terminalType;
 		}
-		PrintWriter sessionOut=null;
+		PrintWriter sessionOut = null;
 		StringBuilder metricContent = new StringBuilder();
 		try {
 			sshSession = connection.openSession();
-			//创建伪终端
+			// 创建伪终端
 			sshSession.requestPTY(terminalTypeDefault);
 			sshSession.startShell();
-			//获得session输出流
-			sessionOut=new PrintWriter(sshSession.getStdin());
-			for(int i=0;i<command.length;i++)
-			{
+			// 获得session输出流
+			sessionOut = new PrintWriter(sshSession.getStdin());
+			for (int i = 0; i < command.length; i++) {
 				sessionOut.println(command[i]);
 			}
-			//在执行完所有命令后，必须执行exit命令，退出。
+			// 在执行完所有命令后，必须执行exit命令，退出。
 			sessionOut.println("exit");
-			//需要在采集命令都设置完毕后，立刻关闭输出流。
+			// 需要在采集命令都设置完毕后，立刻关闭输出流。
 			sessionOut.close();
-			sessionOut=null;
+			sessionOut = null;
 			sshSession.waitForCondition(ChannelCondition.CLOSED | ChannelCondition.EOF | ChannelCondition.EXIT_STATUS, 30000);
-			//获得session输入流
+			// 获得session输入流
 			bufferedReader = new BufferedReader(new InputStreamReader(new StreamGobbler(sshSession.getStdout())));
 			String lineStr = null;
-			if(Assert.isEmptyString(filterString)==true){
+			if (Assert.isEmptyString(filterString) == true) {
 				while ((lineStr = bufferedReader.readLine()) != null) {
 					metricContent.append(lineStr);
 					metricContent.append("^");
 				}
-			}else
-			{
-				//将结果中部分无用数据过滤掉
-				int isSave=0;
-				while((lineStr = bufferedReader.readLine()) != null) {
-					if(lineStr.indexOf(filterString)>=0)
-					{
-						isSave=1;
+			} else {
+				// 将结果中部分无用数据过滤掉
+				int isSave = 0;
+				while ((lineStr = bufferedReader.readLine()) != null) {
+					if (lineStr.indexOf(filterString) >= 0) {
+						isSave = 1;
 					}
-					if(lineStr.indexOf(filterString)>=0&&lineStr.indexOf("exit")>=0)
-					{
-						isSave=0;
+					if (lineStr.indexOf(filterString) >= 0 && lineStr.indexOf("exit") >= 0) {
+						isSave = 0;
 					}
-					if(isSave==1&&lineStr.indexOf(filterString)==-1)
-					{
+					if (isSave == 1 && lineStr.indexOf(filterString) == -1) {
 						metricContent.append(lineStr);
 						metricContent.append("^");
 					}
-					
-					
+
 				}
 			}
 			System.out.println(metricContent.toString());
-			//System.out.println("ExitCode: " + sshSession.getExitStatus());
+			// System.out.println("ExitCode: " + sshSession.getExitStatus());
 
 		} catch (IOException e) {
 			theLogger.exception(e);
 		} finally {
-			if(sessionOut!=null)
-			{
+			if (sessionOut != null) {
 				sessionOut.close();
 			}
 			if (bufferedReader != null) {

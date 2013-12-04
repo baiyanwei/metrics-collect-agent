@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.TimeZone;
 import java.util.Timer;
 
 import javax.management.DynamicMBean;
@@ -90,13 +91,10 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 		this.registerMBean(_jmxObjectName, this);
 		//
 		if (_isflag) {
-			Date today = new Date();
-			@SuppressWarnings("deprecation")
-			Date tomorrow = new Date(today.getYear(), today.getMonth(), today.getDate() + 1, 0, 0, 0);
+			long delayPoint = 86400000 - (System.currentTimeMillis() + TimeZone.getDefault().getRawOffset()) % 86400000;
 			_taskManageTimer = new Timer("MonitoringTaskCacheService._taskManageTimer");
 			// start on tomorrow 0:00
-			_taskManageTimer.schedule(new CacheTaskManageAction(this), tomorrow.getTime() - today.getTime(), _taskTimerExecuteInterval);
-			//_taskManageTimer.schedule(new CacheTaskManageAction(this), new Date(), _taskTimerExecuteInterval);
+			_taskManageTimer.schedule(new CacheTaskManageAction(this), delayPoint, _taskTimerExecuteInterval);
 		}
 		theLogger.info("startUp");
 		//
@@ -125,7 +123,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 				while (true) {
 					try {
 						// hourly
-					//	sleep(3600000L);
+						// sleep(3600000L);
 						sleep(60000L);
 						// synchronized cache task into file.
 						storeCacheTaskInFile();

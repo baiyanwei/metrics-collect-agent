@@ -139,8 +139,8 @@ public class TaskProcessingAction {
 			return false;
 		}
 		try {
-			if (taskObject.getString(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME) == null || taskObject.getString(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME).trim().equals("")) {
-				theLogger.warn("errorTaskFormat", MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME, taskObject.getString(MonitoringTask.TASK_MONITOR_ID_PROPERTY_NAME));
+			if (taskObject.getString(MonitoringTask.TASK_ID_PROPERTY_NAME) == null || taskObject.getString(MonitoringTask.TASK_ID_PROPERTY_NAME).trim().equals("")) {
+				theLogger.warn("errorTaskFormat", MonitoringTask.TASK_ID_PROPERTY_NAME, taskObject.getString(MonitoringTask.TASK_ID_PROPERTY_NAME));
 				return false;
 			}
 			if (taskObject.getString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME) == null || taskObject.getString(MonitoringTask.TASK_TARGET_IP_PROPERTY_NAME).trim().equals("")) {
