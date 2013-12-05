@@ -85,7 +85,7 @@ public class SyslogStore {
 			if (out == null) {
 				String sylogFileName = getLogName("syslog");
 				f = new File(_sysLogBeaconInterface._sysLogPath + sylogFileName);
-				System.out.println(f.getAbsolutePath());
+				//System.out.println(f.getAbsolutePath());
 				if (!f.exists()) {
 					f.createNewFile();
 				}
@@ -200,7 +200,7 @@ public class SyslogStore {
 					out = new PrintStream(new FileOutputStream(f, true));
 					storeSyslog();
 				} else {
-					System.out.println("kong");
+					//System.out.println("kong");
 				}
 			} else {
 				if (out != null) {

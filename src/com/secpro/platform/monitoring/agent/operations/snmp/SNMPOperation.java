@@ -25,7 +25,7 @@ public class SNMPOperation extends MonitorOperation {
 				this._SNMPCollectAdapter = null;
 			}
 			// set your collecting result into message.
-			System.out.println("SNMPOperation>>do task:" + task.getTaskDescription());
+			//System.out.println("SNMPOperation>>do task:" + task.getTaskDescription());
 			// get task meta data
 			HashMap<String, String> metaMap = task.getTaskMetaData();
 			//

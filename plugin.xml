@@ -14,9 +14,8 @@
    		</operation>
 	</extension>
  <extension
-       id="mca_http_interface"
        point="com.secpro.platform.api.pf_api_server">
-      <server id="mca:http:8889" name="mca:http:8889" description="MCA standard interface" implement_class="com.secpro.platform.monitoring.agent.bri.SysLogStandardBeaconInterface">
+      <server id="metrics-collect-agent:http:SysLogRuleAPI" name="metrics-collect-agent:http:SysLogRuleAPI" description="MCA standard interface" implement_class="com.secpro.platform.monitoring.agent.bri.SysLogStandardBeaconInterface">
          <property name="port" value="8889" />
          <handler id="mca.syslog.standard.handler" name="http_mca_syslog_rule_handler" description="reveiver the syslog standard rule in request " implement_class="com.secpro.platform.monitoring.agent.bri.syslog.SysLogStandardHttpRequstHandler">
                <property name="path" value="/" />

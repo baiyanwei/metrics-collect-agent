@@ -1,7 +1,5 @@
 package com.secpro.platform.monitoring.agent.services;
 
-import java.net.Inet4Address;
-import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -9,11 +7,15 @@ import java.util.regex.Pattern;
 import javax.management.DynamicMBean;
 import javax.xml.bind.annotation.XmlElement;
 
+import org.eclipse.core.runtime.IConfigurationElement;
+import org.eclipse.core.runtime.Platform;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.secpro.platform.api.services.APIEngineService;
 import com.secpro.platform.core.metrics.AbstractMetricMBean;
 import com.secpro.platform.core.metrics.Metric;
+import com.secpro.platform.core.services.IConfiguration;
 import com.secpro.platform.core.services.IService;
 import com.secpro.platform.core.services.ServiceInfo;
 import com.secpro.platform.core.utils.Assert;
@@ -32,6 +34,7 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	//
 	private static PlatformLogger theLogger = PlatformLogger.getLogger(MetricStandardService.class);
 	final public static String FETCH_MESSAGE_BODY = "ok";
+	final public static String SYS_LOG_RULE_API_NAME = "metrics-collect-agent:http:SysLogRuleAPI";
 
 	private HashMap<String, JSONObject> _metricStandardRuleMap = new HashMap<String, JSONObject>();
 
@@ -53,8 +56,8 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	@XmlElement(name = "passWord", defaultValue = "123456")
 	public String _password = "";
 
-	@XmlElement(name = "callbackPath", defaultValue = "")
-	public String _callbackPath = "";
+	@XmlElement(name = "callbackPort", type = Integer.class, defaultValue = "8889")
+	public int _callbackPort = 8889;
 
 	@Override
 	public void start() throws Exception {
@@ -62,15 +65,40 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 		this.registerMBean(_jmxObjectName, this);
 
 		//
-		if (Assert.isEmptyString(_callbackPath) == true) {
-			_callbackPath = "http://" + Inet4Address.getLocalHost().getHostAddress() + ":8889/";
-		}
 		//
-
+		setCallbackProtFromCfg();
+		//
 		try {
 			fetchServerStandardRule();
 		} catch (Exception e) {
 			theLogger.exception(e);
+		}
+	}
+
+	private void setCallbackProtFromCfg() {
+		IConfigurationElement[] config = Platform.getExtensionRegistry().getConfigurationElementsFor(APIEngineService.SERVER_CONF_TITLE);
+		//
+		if (config == null) {
+			return;
+		}
+		for (IConfigurationElement configElement : config) {
+			try {
+				if (SYS_LOG_RULE_API_NAME.equalsIgnoreCase(configElement.getAttribute(IConfiguration.ID_CONF_TITLE)) == true) {
+					IConfigurationElement[] pPconfig = configElement.getChildren(IConfiguration.PROPERTY_CONF_TITLE);
+					if (pPconfig == null) {
+						break;
+					}
+					for (IConfigurationElement ppElement : pPconfig) {
+						if ("port".equalsIgnoreCase(ppElement.getAttribute(IConfiguration.PROPERTY_KEY_CONF_TITLE)) == true) {
+							_callbackPort = Integer.parseInt(ppElement.getAttribute(IConfiguration.PROPERTY_VALUE_CONF_TITLE));
+							break;
+						}
+					}
+					break;
+				}
+			} catch (Throwable t) {
+				theLogger.exception(t);
+			}
 		}
 	}
 

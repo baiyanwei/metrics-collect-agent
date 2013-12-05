@@ -21,12 +21,12 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import com.secpro.platform.api.client.ClientConfiguration;
+import com.secpro.platform.api.client.InterfaceParameter;
 import com.secpro.platform.api.common.http.client.HttpClient;
 import com.secpro.platform.core.services.ServiceHelper;
 import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.core.utils.Constants;
 import com.secpro.platform.log.utils.PlatformLogger;
-import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
 import com.secpro.platform.monitoring.agent.services.MetricStandardService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.storages.http.FetchStandardRuleListener;
@@ -62,12 +62,11 @@ public class FetchSysLogStandardRuleAction extends Thread {
 	public void executeFetchStandardRule() {
 		try {
 			MonitoringService monitoringService = ServiceHelper.findService(MonitoringService.class);
-
 			// This is the parameters of the Fetch message
 			HashMap<String, String> requestHeadParaMap = new HashMap<String, String>();
 			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.REGION, monitoringService.getNodeLocation());
 			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.MCA_NAME, monitoringService._mcaName);
-			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.SYSLOG_RULE_PUSH_URL, _metricStandardService._callbackPath);
+			requestHeadParaMap.put(InterfaceParameter.HttpHeaderParameter.SYSLOG_RULE_PUSH_PORT, String.valueOf(_metricStandardService._callbackPort));
 			//
 			DefaultHttpRequest httpRequestV2 = createHttpMessage(this._metricStandardService._fetchStandardRulesPath, HttpMethod.GET, MetricStandardService.FETCH_MESSAGE_BODY);
 			//

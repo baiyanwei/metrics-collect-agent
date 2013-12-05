@@ -224,7 +224,7 @@ public class SSHOperation extends MonitorOperation {
 
 				}
 			}
-			System.out.println(metricContent.toString());
+			//System.out.println(metricContent.toString());
 			// System.out.println("ExitCode: " + sshSession.getExitStatus());
 
 		} catch (IOException e) {

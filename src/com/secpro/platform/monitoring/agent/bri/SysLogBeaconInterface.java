@@ -112,7 +112,7 @@ public class SysLogBeaconInterface implements IService {
 					String ip = new String(packet.getAddress().getHostAddress());
 					String cdate = timedf.format(new Date());
 					String msg = "firewall_ip:" + ip + "," + "reseiveDate:" + cdate + ",msg=" + packet_string;
-					System.out.println(msg);
+					//System.out.println(msg);
 					JSONObject syslog = new JSONObject();
 					syslog.put("hostIP", ip);
 					syslog.put("cdate", cdate);
