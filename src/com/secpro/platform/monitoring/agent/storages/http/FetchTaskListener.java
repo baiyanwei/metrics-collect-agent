@@ -102,9 +102,6 @@ public class FetchTaskListener implements IClientResponseListener {
 					new Thread("DPUStorageListener.taskProcessingAction.processTasks") {
 						public void run() {
 							String decodeContents = decodeContents(contents);
-							// test
-							System.out.println(">>>>" + decodeContents);
-							// String decodeContents = contents;
 							// execute job
 							processTasks(decodeContents);
 							// put job into local task cache.
@@ -193,27 +190,36 @@ public class FetchTaskListener implements IClientResponseListener {
 				JSONObject taskObject = taskJsons.getJSONObject(i);
 				if (taskObject != null && taskObject.has(MonitoringTask.TASK_META_DATA_NAME)) {
 					JSONObject metaJsonObj = taskObject.getJSONObject(MonitoringTask.TASK_META_DATA_NAME);
-					/*
-					if (metaJsonObj != null && metaJsonObj.has(MonitoringTask.TASK_META_DATA_SECRET_NAME) && Assert.isEmptyString(_privateKey) == false) {
-						String secret = metaJsonObj.getString(MonitoringTask.TASK_META_DATA_SECRET_NAME);
-						metaJsonObj.remove(MonitoringTask.TASK_META_DATA_SECRET_NAME);
-						MonitoringEncryptService encryptService = ServiceHelper.findService(MonitoringEncryptService.class);
-						if (Assert.isEmptyString(secret) == false && encryptService != null) {
-							byte[] decodeData = encryptService.decryptByPrivateKey(encryptService.decryptBASE64(secret), _privateKey);
-							if (decodeData != null && decodeData.length > 0) {
-								JSONTokener secretParser = new JSONTokener(new String(decodeData));
-								JSONObject secretJsonObj = new JSONObject(secretParser);
-								String[] names = JSONObject.getNames(secretJsonObj);
-								if (names != null && names.length > 0) {
-									for (int j = 0; j < names.length; j++) {
-										metaJsonObj.put(names[j], secretJsonObj.getString(names[j]));
-
-									}
-								}
-							}
-						}
-					}
-					*/
+					//
+					// if (metaJsonObj != null &&
+					// metaJsonObj.has(MonitoringTask.TASK_META_DATA_SECRET_NAME)
+					// && Assert.isEmptyString(_privateKey) == false) {
+					// String secret =
+					// metaJsonObj.getString(MonitoringTask.TASK_META_DATA_SECRET_NAME);
+					// metaJsonObj.remove(MonitoringTask.TASK_META_DATA_SECRET_NAME);
+					// MonitoringEncryptService encryptService =
+					// ServiceHelper.findService(MonitoringEncryptService.class);
+					// if (Assert.isEmptyString(secret) == false &&
+					// encryptService != null) {
+					// byte[] decodeData =
+					// encryptService.decryptByPrivateKey(encryptService.decryptBASE64(secret),
+					// _privateKey);
+					// if (decodeData != null && decodeData.length > 0) {
+					// JSONTokener secretParser = new JSONTokener(new
+					// String(decodeData));
+					// JSONObject secretJsonObj = new JSONObject(secretParser);
+					// String[] names = JSONObject.getNames(secretJsonObj);
+					// if (names != null && names.length > 0) {
+					// for (int j = 0; j < names.length; j++) {
+					// metaJsonObj.put(names[j],
+					// secretJsonObj.getString(names[j]));
+					//
+					// }
+					// }
+					// }
+					// }
+					// }
+					//
 					String[] metaPPNames = JSONObject.getNames(metaJsonObj);
 					if (metaPPNames != null && metaPPNames.length > 0) {
 						for (int k = 0; k < metaPPNames.length; k++) {
