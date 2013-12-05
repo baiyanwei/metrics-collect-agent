@@ -33,6 +33,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.secpro.platform.api.client.ClientConfiguration;
+import com.secpro.platform.api.client.InterfaceParameter;
 import com.secpro.platform.api.common.http.client.HttpClient;
 import com.secpro.platform.core.exception.PlatformException;
 import com.secpro.platform.core.services.IService;
@@ -42,7 +43,6 @@ import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.core.utils.Constants;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.TaskProcessingAction;
-import com.secpro.platform.monitoring.agent.node.InterfaceParameter;
 import com.secpro.platform.monitoring.agent.services.MonitoringEncryptService;
 import com.secpro.platform.monitoring.agent.services.MonitoringService;
 import com.secpro.platform.monitoring.agent.services.MonitoringTaskCacheService;
