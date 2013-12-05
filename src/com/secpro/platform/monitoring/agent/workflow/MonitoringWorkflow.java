@@ -571,6 +571,10 @@ public class MonitoringWorkflow extends AbstractMetricMBean implements IService,
 
 		OperationError operationError = new OperationError();
 		operationError._code = OperationError.McaError.GENERAL_ERROR;
+		operationError._type = OperationError.ErrorType.operation;
+		if (this._monitoringTask.getTaskObj() != null) {
+			operationError._entry = this._monitoringTask.getTaskObj().toString();
+		}
 
 		if (exception instanceof PlatformException) {
 			operationError._exception = (PlatformException) exception;
