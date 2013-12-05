@@ -32,17 +32,17 @@ public class FetchTaskListener implements IClientResponseListener {
 	public TaskProcessingAction _taskProcessingAction = null;
 	// 0 false 1 true
 	// private byte _isHasResponse = 0;
-	
+
 	private String _listenerID = "FetchTaskListener";
 
 	private String _listenerName = "FetchTaskListener";
 
 	private String _listenerDescription = null;
-	private String _privateKey="";
+	private String _privateKey = "";
 
-	public FetchTaskListener(TaskProcessingAction action,String privateKey) {
+	public FetchTaskListener(TaskProcessingAction action, String privateKey) {
 		this._taskProcessingAction = action;
-		this._privateKey=privateKey;
+		this._privateKey = privateKey;
 	}
 
 	private void recycleWorkflows() {
@@ -101,9 +101,10 @@ public class FetchTaskListener implements IClientResponseListener {
 				if (contents != null && contents.trim().length() > 0) {
 					new Thread("DPUStorageListener.taskProcessingAction.processTasks") {
 						public void run() {
-							String decodeContents=decodeContents(contents);
-							//test 
-							//String decodeContents=contents;
+							String decodeContents = decodeContents(contents);
+							// test
+							System.out.println(">>>>" + decodeContents);
+							// String decodeContents = contents;
 							// execute job
 							processTasks(decodeContents);
 							// put job into local task cache.
@@ -135,11 +136,11 @@ public class FetchTaskListener implements IClientResponseListener {
 		if (messageObj != null) {
 			theLogger.exception(new Exception(messageObj.toString()));
 		}
-//		new Thread("DPUStorageListener.taskProcessingAction.recycle") {
-//			public void run() {
-//				recycleWorkflows();
-//			}
-//		}.start();
+		// new Thread("DPUStorageListener.taskProcessingAction.recycle") {
+		// public void run() {
+		// recycleWorkflows();
+		// }
+		// }.start();
 
 	}
 
@@ -168,59 +169,71 @@ public class FetchTaskListener implements IClientResponseListener {
 			theLogger.exception(e);
 		}
 	}
+
 	/**
 	 * 当接收到任务队列后，对任务队列中加密块（secret）进行解密
+	 * 
 	 * @param contents
 	 * @return
 	 */
-	private String decodeContents(String contents)
-	{
-		
+	private String decodeContents(String contents) {
+
 		theLogger.debug("decodeContents", contents);
 
 		if (contents == null || contents.trim().length() <= 0) {
 			return contents;
 		}
-		JSONArray decodeTaskJsons=null;
+		JSONArray decodeTaskJsons = null;
 		JSONTokener parser = new JSONTokener(contents);
 		try {
 			JSONArray taskJsons = new JSONArray(parser);
-			decodeTaskJsons=new JSONArray();
+			decodeTaskJsons = new JSONArray();
+			MonitoringEncryptService encryptService = ServiceHelper.findService(MonitoringEncryptService.class);
 			for (int i = 0; i < taskJsons.length(); i++) {
 				JSONObject taskObject = taskJsons.getJSONObject(i);
-				if(taskObject!=null&&taskObject.has(MonitoringTask.TASK_META_DATA_NAME))
-				{
-					JSONObject metaJsonObj=taskObject.getJSONObject(MonitoringTask.TASK_META_DATA_NAME);
-					if(metaJsonObj!=null&&metaJsonObj.has("secret")&&Assert.isEmptyString(_privateKey)==false)
-					{
-						String secret=metaJsonObj.getString("secret");
-						metaJsonObj.remove("secret");
-						MonitoringEncryptService encryptService=ServiceHelper.findService(MonitoringEncryptService.class);
-						if(Assert.isEmptyString(secret)==false&&encryptService!=null)
-						{
-							byte[] decodeData=encryptService.decryptByPrivateKey(encryptService.decryptBASE64(secret), _privateKey);
-							if(decodeData!=null&&decodeData.length>0){
-							JSONTokener secretParser=new JSONTokener(new String(decodeData));
-							JSONObject secretJsonObj=new JSONObject(secretParser);
-							String[] names=JSONObject.getNames(secretJsonObj);
-							if(names!=null&&names.length>0)
-							{
-								for(int j=0;j<names.length;j++)
-								{
-									metaJsonObj.put(names[j], secretJsonObj.getString(names[j]));
-									
+				if (taskObject != null && taskObject.has(MonitoringTask.TASK_META_DATA_NAME)) {
+					JSONObject metaJsonObj = taskObject.getJSONObject(MonitoringTask.TASK_META_DATA_NAME);
+					/*
+					if (metaJsonObj != null && metaJsonObj.has(MonitoringTask.TASK_META_DATA_SECRET_NAME) && Assert.isEmptyString(_privateKey) == false) {
+						String secret = metaJsonObj.getString(MonitoringTask.TASK_META_DATA_SECRET_NAME);
+						metaJsonObj.remove(MonitoringTask.TASK_META_DATA_SECRET_NAME);
+						MonitoringEncryptService encryptService = ServiceHelper.findService(MonitoringEncryptService.class);
+						if (Assert.isEmptyString(secret) == false && encryptService != null) {
+							byte[] decodeData = encryptService.decryptByPrivateKey(encryptService.decryptBASE64(secret), _privateKey);
+							if (decodeData != null && decodeData.length > 0) {
+								JSONTokener secretParser = new JSONTokener(new String(decodeData));
+								JSONObject secretJsonObj = new JSONObject(secretParser);
+								String[] names = JSONObject.getNames(secretJsonObj);
+								if (names != null && names.length > 0) {
+									for (int j = 0; j < names.length; j++) {
+										metaJsonObj.put(names[j], secretJsonObj.getString(names[j]));
+
+									}
 								}
 							}
+						}
+					}
+					*/
+					String[] metaPPNames = JSONObject.getNames(metaJsonObj);
+					if (metaPPNames != null && metaPPNames.length > 0) {
+						for (int k = 0; k < metaPPNames.length; k++) {
+							try {
+								byte[] decodeData = encryptService.decryptByPrivateKey(encryptService.decryptBASE64(metaJsonObj.getString(metaPPNames[k])), _privateKey);
+								if (decodeData == null || decodeData.length == 0) {
+									continue;
+								}
+								metaJsonObj.put(metaPPNames[k], new String(decodeData));
+							} catch (Exception e) {
+								theLogger.exception(e);
 							}
 						}
 					}
 				}
 				decodeTaskJsons.put(taskObject);
 			}
-			
+
 		} catch (JSONException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			theLogger.equals(e);
 		}
 		return decodeTaskJsons.toString();
 	}

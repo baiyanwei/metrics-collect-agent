@@ -24,6 +24,7 @@ public class MonitoringTask {
 	public static final String TASK_TARGET_PORT_PROPERTY_NAME = "tpt";
 	public static final String TASK_CONTENT_PROPERTY_NAME = "con";
 	public static final String TASK_META_DATA_NAME = "mda";
+	//public static final String TASK_META_DATA_SECRET_NAME = "secret";
 
 	//
 
