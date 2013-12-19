@@ -171,12 +171,19 @@ public class MetricStandardService extends AbstractMetricMBean implements IServi
 	 * @param ip
 	 * @return
 	 */
-	public JSONObject removeRule(String ip) {
-		if (Assert.isEmptyString(ip) == true) {
-			return null;
+	public void removeRules(String ips) {
+		if (Assert.isEmptyString(ips) == true) {
+			return;
 		}
+		String[] ipsArray = ips.split(",");
+		if (ipsArray == null || ipsArray.length == 0) {
+			return;
+		}
+
 		synchronized (this._metricStandardRuleMap) {
-			return this._metricStandardRuleMap.remove(ip);
+			for (String ip : ipsArray) {
+				this._metricStandardRuleMap.remove(ip);
+			}
 		}
 	}
 

@@ -4,18 +4,20 @@ import javax.xml.bind.annotation.XmlElement;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
+import com.secpro.platform.api.client.InterfaceParameter;
 import com.secpro.platform.api.server.IHttpRequestHandler;
 import com.secpro.platform.core.services.ServiceHelper;
+import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.actions.FetchSysLogStandardRuleAction;
+import com.secpro.platform.monitoring.agent.bri.SysLogStandardBeaconInterface;
 import com.secpro.platform.monitoring.agent.services.MetricStandardService;
 
 /**
- * @author baiyanwei
- * Sep 24, 2013
- *
- *  for SYSLOG standard rule receiver.
- *
+ * @author baiyanwei Sep 24, 2013
+ * 
+ *         for SYSLOG standard rule receiver.
+ * 
  */
 public class SysLogStandardHttpRequstHandler implements IHttpRequestHandler {
 	final private static PlatformLogger theLogger = PlatformLogger.getLogger(SysLogStandardHttpRequstHandler.class);
@@ -42,7 +44,7 @@ public class SysLogStandardHttpRequstHandler implements IHttpRequestHandler {
 
 	@Override
 	public Object PUT(HttpRequest request, Object messageObj) throws Exception {
-		return "PUT";
+		return POST(request, messageObj);
 	}
 
 	@Override
@@ -52,21 +54,36 @@ public class SysLogStandardHttpRequstHandler implements IHttpRequestHandler {
 
 	@Override
 	public Object GET(HttpRequest request, Object messageObj) throws Exception {
-		return POST(request,messageObj);
+		return POST(request, messageObj);
 	}
 
 	@Override
 	public Object POST(HttpRequest request, Object messageObj) throws Exception {
-		
-		MetricStandardService metricService=ServiceHelper.findService(MetricStandardService.class);
-		FetchSysLogStandardRuleAction ruleAction=new FetchSysLogStandardRuleAction(metricService);
-		try{
-		ruleAction.analyzeStandardRuleOK((String)messageObj);
-		} catch (Exception e) {
-			theLogger.exception(e);
-			return e.getMessage();
+		String operationCode = request.getHeader(InterfaceParameter.ManagementParameter.OPERATION_TYPE);
+		if (Assert.isEmptyString(operationCode) == true) {
+			throw new Exception("invalid " + InterfaceParameter.ManagementParameter.OPERATION_TYPE);
 		}
-		return "OK";
+		if (messageObj == null) {
+			throw new Exception("invalid messag object");
+		}
+		MetricStandardService metricService = ServiceHelper.findService(MetricStandardService.class);
+		if (SysLogStandardBeaconInterface.MSU_COMMAND_SYSLOG_RULE_ADD.equalsIgnoreCase(operationCode) == true
+				|| SysLogStandardBeaconInterface.MSU_COMMAND_SYSLOG_RULE_UPDATE.equalsIgnoreCase(operationCode) == true) {
+			FetchSysLogStandardRuleAction ruleAction = new FetchSysLogStandardRuleAction(metricService);
+			try {
+				ruleAction.analyzeStandardRuleOK((String) messageObj);
+			} catch (Exception e) {
+				theLogger.exception(e);
+				throw e;
+			}
+			return "OK";
+		} else if (SysLogStandardBeaconInterface.MSU_COMMAND_SYSLOG_RULE_REMOVE.equalsIgnoreCase(operationCode) == true) {
+			metricService.removeRules((String) messageObj);
+			return "OK";
+		} else {
+			return "invalid operationType:" + operationCode;
+		}
+
 	}
 
 	@Override

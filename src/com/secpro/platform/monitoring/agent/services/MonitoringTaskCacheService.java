@@ -71,6 +71,9 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	// sample
 	@XmlElement(name = "waitUploadSampleLocalPath", defaultValue = "/data/mca/sample/waitupload/")
 	public String _waitUploadSampleLocalPath = "";
+
+	@XmlElement(name = "uploadCacheSampleInerval", type = Long.class, defaultValue = "20000")
+	public long _uploadCacheSampleInerval = 20000;
 	/**
 	 * upload file name list.
 	 */
@@ -272,7 +275,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	 * @return 任务对象
 	 */
 	public JSONObject getCacheTaskInReferent() {
-		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		// Date d = new Date();
 		// 计算昨天此时的毫秒数
 		long yesterday = System.currentTimeMillis() - DAY_MSECONDS;
@@ -313,13 +316,13 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 				timeTemp = timeInterval;
 				temp = te;
 			}
-			if(temp!=null){
+			if (temp != null) {
 				_taskCacheQueue.remove(temp);
-				String mid=temp.getString("monitor_id");
-				if(mid!=null&&(!mid.endsWith("_c"))){
-					temp.put("monitor_id", mid+"_c");
+				String mid = temp.getString("monitor_id");
+				if (mid != null && (!mid.endsWith("_c"))) {
+					temp.put("monitor_id", mid + "_c");
 				}
-				Date now=new Date();
+				Date now = new Date();
 				temp.put("create_at", now.getTime());
 				temp.put("timestamp", sdf.format(now));
 			}
@@ -442,7 +445,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 				public void run() {
 					while (true) {
 						try {
-							sleep(2000L);
+							sleep(_uploadCacheSampleInerval);
 							// upload the raw data to server
 							uploadSampleDataForFile();
 						} catch (Exception e) {

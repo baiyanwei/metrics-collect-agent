@@ -11,6 +11,9 @@ import com.secpro.platform.monitoring.agent.services.MetricStandardService;
  * 
  */
 public class SysLogStandardBeaconInterface extends HttpServer {
+	final public static String MSU_COMMAND_SYSLOG_RULE_ADD = "TOPIC-SYSLOG-STANDARD-RULE-ADD";
+	final public static String MSU_COMMAND_SYSLOG_RULE_UPDATE = "TOPIC-SYSLOG-STANDARD-RULE-UPDATE";
+	final public static String MSU_COMMAND_SYSLOG_RULE_REMOVE = "TOPIC-SYSLOG-STANDARD-RULE-REMOVE";
 
 	@Override
 	public void start() throws Exception {
