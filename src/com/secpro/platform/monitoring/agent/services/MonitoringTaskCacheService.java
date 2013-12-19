@@ -21,6 +21,7 @@ import javax.xml.bind.annotation.XmlElement;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.secpro.platform.api.client.InterfaceParameter;
 import com.secpro.platform.core.metrics.AbstractMetricMBean;
 import com.secpro.platform.core.metrics.Metric;
 import com.secpro.platform.core.services.IService;
@@ -288,7 +289,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 			while (it.hasNext()) {
 				JSONObject te = it.next();
 
-				String execT = te.getString("create_at");
+				String execT = te.getString(InterfaceParameter.MonitoringTask.TASK_SCHEDULE_POINT_PROPERTY_NAME);
 				if (Assert.isEmptyString(execT) == true) {
 					continue;
 				}
@@ -318,13 +319,13 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 			}
 			if (temp != null) {
 				_taskCacheQueue.remove(temp);
-				String mid = temp.getString("monitor_id");
+				String mid = temp.getString(InterfaceParameter.MonitoringTask.TASK_SCHEDULE_ID_PROPERTY_NAME);
 				if (mid != null && (!mid.endsWith("_c"))) {
-					temp.put("monitor_id", mid + "_c");
+					temp.put(InterfaceParameter.MonitoringTask.TASK_SCHEDULE_ID_PROPERTY_NAME, mid + "_c");
 				}
 				Date now = new Date();
-				temp.put("create_at", now.getTime());
-				temp.put("timestamp", sdf.format(now));
+				temp.put(InterfaceParameter.MonitoringTask.TASK_SCHEDULE_POINT_PROPERTY_NAME, now.getTime());
+				// temp.put("sat", sdf.format(now));
 			}
 		} catch (JSONException e) {
 			theLogger.exception(e);
@@ -351,7 +352,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 			while (taskIter.hasNext()) {
 				targetTask = taskIter.next();
 				try {
-					String createAt = targetTask.getString("create_at");
+					String createAt = targetTask.getString(InterfaceParameter.MonitoringTask.TASK_SCHEDULE_POINT_PROPERTY_NAME);
 					if (Assert.isEmptyString(createAt) == true) {
 						continue;
 					}

@@ -177,7 +177,7 @@ public class SSHOperation extends MonitorOperation {
 		Session sshSession = null;
 		BufferedReader bufferedReader = null;
 		String[] command = commands.split("\\^");
-		String terminalTypeDefault = "bush";
+		String terminalTypeDefault = "vt100";
 		if (Assert.isEmptyString(terminalType) == false) {
 			terminalTypeDefault = terminalType;
 		}
