@@ -276,7 +276,7 @@ public class MonitoringTaskCacheService extends AbstractMetricMBean implements I
 	 * @return 任务对象
 	 */
 	public JSONObject getCacheTaskInReferent() {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		//SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		// Date d = new Date();
 		// 计算昨天此时的毫秒数
 		long yesterday = System.currentTimeMillis() - DAY_MSECONDS;
