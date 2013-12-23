@@ -200,7 +200,7 @@ public class SSHOperation extends MonitorOperation {
 			sessionOut = null;
 			sshSession.waitForCondition(ChannelCondition.CLOSED | ChannelCondition.EOF | ChannelCondition.EXIT_STATUS, 30000);
 			// 获得session输入流
-			bufferedReader = new BufferedReader(new InputStreamReader(new StreamGobbler(sshSession.getStdout())));
+			bufferedReader = new BufferedReader(new InputStreamReader(new StreamGobbler(sshSession.getStdout()),"utf-8"));
 			String lineStr = null;
 			if (Assert.isEmptyString(filterString) == true) {
 				while ((lineStr = bufferedReader.readLine()) != null) {

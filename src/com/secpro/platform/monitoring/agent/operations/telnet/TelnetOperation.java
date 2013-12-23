@@ -59,7 +59,7 @@ public class TelnetOperation extends MonitorOperation {
 		try {
 			char lastChar = pattern.charAt(pattern.length() - 1);
 			StringBuffer sb = new StringBuffer();
-			char ch = (char) _telnetIn.read();
+			char ch = (char) _telnetIn.read(); 
 			StringBuffer temp = new StringBuffer();
 			while (true) {
 				if (ch == '\r') {

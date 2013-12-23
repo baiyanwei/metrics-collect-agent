@@ -142,7 +142,6 @@ public class FetchSysLogStandardRuleAction extends Thread {
 		}
 		try {
 			theLogger.debug("analyzeStandardRule", content);
-
 			JSONTokener parser = new JSONTokener(content);
 			JSONArray ruleJsons = new JSONArray(parser);
 
