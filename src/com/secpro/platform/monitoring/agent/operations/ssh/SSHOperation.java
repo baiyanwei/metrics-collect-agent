@@ -169,7 +169,7 @@ public class SSHOperation extends MonitorOperation {
 	 * @param command
 	 *            远程执行命令行代码
 	 */
-	private String executeShellCommand(Connection connection, String commands, String terminalType, String filterString) throws PlatformException {
+	private String executeShellCommand(Connection connection, String commands, String encoding, String filterString) throws PlatformException {
 		if (connection == null) {
 			return null;
 		}
@@ -178,8 +178,9 @@ public class SSHOperation extends MonitorOperation {
 		BufferedReader bufferedReader = null;
 		String[] command = commands.split("\\^");
 		String terminalTypeDefault = "vt100";
-		if (Assert.isEmptyString(terminalType) == false) {
-			terminalTypeDefault = terminalType;
+		String encodingDefault="utf-8";
+		if (Assert.isEmptyString(encoding) == false) {
+			encodingDefault =encoding ;
 		}
 		PrintWriter sessionOut = null;
 		StringBuilder metricContent = new StringBuilder();
@@ -200,7 +201,7 @@ public class SSHOperation extends MonitorOperation {
 			sessionOut = null;
 			sshSession.waitForCondition(ChannelCondition.CLOSED | ChannelCondition.EOF | ChannelCondition.EXIT_STATUS, 30000);
 			// 获得session输入流
-			bufferedReader = new BufferedReader(new InputStreamReader(new StreamGobbler(sshSession.getStdout()),"utf-8"));
+			bufferedReader = new BufferedReader(new InputStreamReader(new StreamGobbler(sshSession.getStdout()),encodingDefault));
 			String lineStr = null;
 			if (Assert.isEmptyString(filterString) == true) {
 				while ((lineStr = bufferedReader.readLine()) != null) {
