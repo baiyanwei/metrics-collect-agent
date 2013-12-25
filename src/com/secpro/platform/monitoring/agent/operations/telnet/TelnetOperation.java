@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.net.telnet.TelnetClient;
@@ -14,6 +16,7 @@ import com.secpro.platform.core.utils.Assert;
 import com.secpro.platform.log.utils.PlatformLogger;
 import com.secpro.platform.monitoring.agent.operations.MonitorOperation;
 import com.secpro.platform.monitoring.agent.operations.OperationError;
+import com.secpro.platform.monitoring.agent.utils.io.LinedInputStream;
 import com.secpro.platform.monitoring.agent.workflow.MonitoringTask;
 
 /**
@@ -34,7 +37,7 @@ public class TelnetOperation extends MonitorOperation {
 	public void init(String ip, int port, String username, String password, String prompt, String userPrompt, String passwdPrompt) throws Exception {
 		_telnetClient = new TelnetClient();
 		try {
-			_telnetClient.setConnectTimeout(10000);
+			_telnetClient.setConnectTimeout(20000);
 			_telnetClient.connect(ip, port);
 			_telnetIn = _telnetClient.getInputStream();
 			_telnetOut = new PrintStream(_telnetClient.getOutputStream());
@@ -48,11 +51,13 @@ public class TelnetOperation extends MonitorOperation {
 	}
 
 	public void login(String username, String password, String userPrompt, String passwdPrompt) {
+		
 		readUntil(userPrompt);
 		write(username);
 		readUntil(passwdPrompt);
 		write(password);
 		readUntil(_prompt + "");
+		
 	}
 
 	public String readUntil(String pattern) {
@@ -87,36 +92,49 @@ public class TelnetOperation extends MonitorOperation {
 		return null;
 	}
 
-	public String readUntil(String pattern, String fenge, String fengeci) {
+	public String readLineUntil(String pattern, String bianma, String fengeci) {
+		
 		try {
-			char lastChar = pattern.charAt(pattern.length() - 1);
-			StringBuffer sb = new StringBuffer();
-			char ch = (char) _telnetIn.read();
-			StringBuffer temp = new StringBuffer();
-			while (true) {
-				if (ch == '\r') {
-				} else if (ch == '\n') {
-					sb.append('^');
-					temp.delete(0, temp.length());
-				} else {
-					sb.append(ch);
-					temp.append(ch);
-				}
-				if (ch == lastChar) {
-					if (sb.toString().endsWith(pattern)) {
-						return sb.toString();
+			final StringBuilder sb = new StringBuilder();
+			LinedInputStream lis = new LinedInputStream(_telnetIn);
+			final List tre = new ArrayList();
+			String line = "";
+			byte[] bb = null;
+			new Thread() {
+				private int count = 0;
+
+				public void run() {
+					count = sb.length();
+					while (tre.size() == 0 && _telnetClient.isConnected()) {
+						if (count == sb.length()) {
+							write(" ");
+						}
+						count = sb.length();
+						try {
+							Thread.sleep(50);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					}
+					return;
 				}
-				if ((ch + "").equals(fenge)) {
-					if (temp.toString().toLowerCase().contains(fengeci)) {
-						write(" ");
-					}
+			}.start();
+
+			while ((bb = lis.readLine()).length > 0) {
+				
+				line = new String(bb);
+				
+				sb.append(new String(bb, bianma) + "^");
+				
+				if (line.contains(pattern)) {
+					tre.add("aa");
+					return sb.toString();
 				}
-				ch = (char) _telnetIn.read();
-				System.out.print(ch);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+			System.out.println("exception-------------:"+e.getMessage());
 		}
 		return null;
 	}
@@ -130,13 +148,14 @@ public class TelnetOperation extends MonitorOperation {
 		}
 	}
 
-	public String sendCommand(String command, String openCommand, String execPrompt, String fenge, String fengeci) {
+	public String sendCommand(String command, String openCommand, String execPrompt, String bianma, String fengeci) {
 		try {
+			
 			write(command);
 			if (command.equals(openCommand)) {
 				this._prompt = execPrompt;
 			}
-			return readUntil(_prompt + "", fenge, fengeci);
+			return readLineUntil(_prompt + "", bianma, fengeci);
 		} catch (Exception e) {
 			theLogger.exception(e);
 		}
@@ -222,9 +241,9 @@ public class TelnetOperation extends MonitorOperation {
 		if (Assert.isEmptyString(passwdPrompt) == true) {
 			throw new PlatformException("invalid passwdPrompt in TELNET operation.");
 		}
-		String separPrompt = metaMap.get("separPrompt");
-		if (Assert.isEmptyString(separPrompt) == true) {
-			separPrompt = "^";
+		String bianma = metaMap.get("separPrompt");
+		if (Assert.isEmptyString(bianma) == true) {
+			bianma = "utf-8";
 		}
 		String separWrod = metaMap.get("separWrod");
 		if (Assert.isEmptyString(separWrod) == true) {
@@ -235,12 +254,13 @@ public class TelnetOperation extends MonitorOperation {
 			this.init(ip, Integer.parseInt(port), username, password, prompt, userPrompt, passwdPrompt);
 			StringBuilder results = new StringBuilder();
 			for (int i = 0; i < shellCommands.length; i++) {
-				String res = this.sendCommand(shellCommands[i], openCommand, execPrompt, separPrompt, separWrod);
+				String res = this.sendCommand(shellCommands[i], openCommand, execPrompt, bianma, separWrod);
 				if (res != null && (!res.equals(""))) {
 					if (!res.equals(shellCommands[i]))
 						results.append(res);
 				}
 			}
+			
 			// "telnet":'{'"mid": "{0}","t": "{1}","ip": "{2}","s":
 			// "{3}","c":"{4}"'}'
 			HashMap<String, String> messageInputAndRequestHeaders = this._monitoringWorkflow.getMessageInputAndRequestHeaders(this._operationID, shellCommand, results.toString());
